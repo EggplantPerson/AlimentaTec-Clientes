@@ -1,0 +1,74 @@
+[
+  {
+    "id": "1",
+    "name": "Sandwich",
+    "description": "Delicioso sandwich de pavo y queso con vegetales frescos.",
+    "image": "sandwich.png",
+    "price": 199.00,
+    "available": true,
+     "category": "Comida"
+  },
+  {
+    "id": "2",
+    "name": "Hamburguesa",
+    "description": "Clasica hamburguesa de res con queso chedar, lechuga y tomate .",
+    "image": "hamburguesa.jpg",
+    "price": 250.00,
+    "available": true,
+     "category": "Comida"
+  },
+  {
+    "id": "3",
+    "name": "Pizza",
+    "description": "Rica pizza de peperoni.",
+    "image": "pizza.jpg",
+    "price": 299.00,
+    "available": false,
+     "category": "Comida"
+  },
+  {
+    "id": "4",
+    "name": "Croissant",
+    "description": "Rico croissant de jamon y queso.",
+    "image": "croisant.png",
+    "price": 120.00,
+    "available": true,
+     "category": "Comida"
+  },
+  {
+    "id": "5",
+    "name": "Licuado",
+    "description": "Rico licuado de platano.",
+    "image": "licuado.png",
+    "price": 60.00,
+    "available": true,
+     "category": "Bebida"
+  },
+  {
+    "id": "6",
+    "name": "Frappe",
+    "description": "Rico frappe de fresa kiwi.",
+    "image": "frappe.png",
+    "price":80.90,
+    "available": true,
+     "category": "Bebida"
+  },
+  {
+    "id": "7",
+    "name": "Papas",
+    "description": "Ricas papas a la francesa.",
+    "image": "papas.jpg",
+    "price": 50.50,
+    "available": false,
+     "category": "Snack"
+  },
+  {
+    "id": "8",
+    "name": "Galletas",
+    "description": "Ricas galletas de mantequilla.",
+    "image": "galletas.jpg",
+    "price": 26.00,
+    "available": true,
+    "category": "Snack"
+  }
+]
