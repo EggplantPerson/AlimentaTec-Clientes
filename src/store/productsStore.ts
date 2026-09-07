@@ -12,7 +12,7 @@ export interface Product {
   category: string;
   notes: string;
 }
-
+//
 export type ProductInput = Omit<Product, 'id'>;
 
 export const ALL_CATEGORIES_LABEL = 'Todos';
