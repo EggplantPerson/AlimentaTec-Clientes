@@ -1,20 +1,8 @@
 import { Stack } from 'expo-router';
-import {
-  ActivityIndicator,
-  FlatList,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { useMemo, useState } from 'react';
+import {ActivityIndicator,FlatList,Pressable,ScrollView,StyleSheet,Text,TextInput,View,} from 'react-native';
 import ProductCard from '../../components/ProductCard';
-import {
-  useCategories,
-  useFilteredProducts,
-  useLoadProducts,
-  useProductsStore,
-} from '../../store/productsStore';
+import {useCategories,useFilteredProducts,useLoadProducts,useProductsStore,} from '../../store/productsStore';
 
 export default function ProductsScreen() {
   useLoadProducts();
@@ -24,7 +12,17 @@ export default function ProductsScreen() {
   const loading = useProductsStore((state) => state.loading);
   const error = useProductsStore((state) => state.error);
 
-  const filteredProducts = useFilteredProducts();
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const categoryFilteredProducts = useFilteredProducts();
+
+  const filteredProducts = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+    if (!query) return categoryFilteredProducts;
+    return categoryFilteredProducts.filter((product) =>
+      product.name.toLowerCase().includes(query)
+    );
+  }, [categoryFilteredProducts, searchQuery]);
 
   return (
     <View style={styles.container}>
@@ -32,6 +30,22 @@ export default function ProductsScreen() {
 
       <View style={styles.headerRow}>
         <Text style={styles.title}>Productos</Text>
+      </View>
+
+      {/* Buscador */}
+      <View style={styles.searchContainer}>
+        <TextInput
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+          placeholder="Buscar producto..."
+          placeholderTextColor="#6b9c80"
+          style={styles.searchInput}
+        />
+        {searchQuery.length > 0 && (
+          <Pressable onPress={() => setSearchQuery('')} style={styles.clearButton}>
+            <Text style={styles.clearButtonText}>✕</Text>
+          </Pressable>
+        )}
       </View>
 
       {error && <Text style={styles.errorText}>{error}</Text>}
@@ -74,7 +88,9 @@ export default function ProductsScreen() {
           contentContainerStyle={styles.listContent}
           ListEmptyComponent={
             <Text style={styles.emptyText}>
-              No hay productos en la categoría "{selectedCategory}".
+              {searchQuery
+                ? `No se encontraron productos para "${searchQuery}".`
+                : `No hay productos en la categoría "${selectedCategory}".`}
             </Text>
           }
         />
@@ -93,12 +109,39 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: 16,
+    paddingBottom: 8,
     backgroundColor: '#f0fdf4',
   },
   title: {
     fontSize: 22,
     fontWeight: '700',
     color: '#14532d',
+  },
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginHorizontal: 16,
+    marginBottom: 8,
+    backgroundColor: '#ffffff',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#bbf7d0',
+    paddingHorizontal: 14,
+  },
+  searchInput: {
+    flex: 1,
+    paddingVertical: 10,
+    fontSize: 14,
+    color: '#14532d',
+  },
+  clearButton: {
+    paddingLeft: 8,
+    paddingVertical: 6,
+  },
+  clearButtonText: {
+    fontSize: 14,
+    color: '#4d7c62',
+    fontWeight: '700',
   },
   errorText: {
     color: '#b91c1c',
@@ -149,5 +192,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 40,
     color: '#4d7c62',
+    paddingHorizontal: 24,
   },
 });

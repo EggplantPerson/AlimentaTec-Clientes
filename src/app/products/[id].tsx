@@ -1,15 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import {
-  View,
-  Text,
-  Image,
-  ScrollView,
-  StyleSheet,
-  Pressable,
-  TextInput,
-  ActivityIndicator,
-  Alert,
-} from 'react-native';
+import {View,Text,Image,ScrollView,StyleSheet,Pressable,TextInput,ActivityIndicator,Alert,} from 'react-native';
 import { Stack, useLocalSearchParams } from 'expo-router';
 import { useProductsStore } from '../../store/productsStore';
 
