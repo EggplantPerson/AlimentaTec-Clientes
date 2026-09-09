@@ -1,6 +1,17 @@
-import React, { useEffect, useState } from 'react';
-import {View,Text,Image,ScrollView,StyleSheet,Pressable,TextInput,ActivityIndicator,Alert,} from 'react-native';
 import { Stack, useLocalSearchParams } from 'expo-router';
+import { useEffect, useState } from 'react';
+import {
+  ActivityIndicator,
+  Alert,
+  Image,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
+import { PRODUCT_IMAGES } from '../../constants/images';
 import { useProductsStore } from '../../store/productsStore';
 
 export default function ProductDetailScreen() {
@@ -62,7 +73,7 @@ export default function ProductDetailScreen() {
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <Stack.Screen options={{ title: displayedProduct.name }} />
 
-      <Image source={{ uri: displayedProduct.image }} style={styles.image} />
+      <Image source={PRODUCT_IMAGES[displayedProduct.image]} style={styles.image} />
 
       <View style={styles.body}>
         <View style={styles.headerRow}>
