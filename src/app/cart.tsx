@@ -1,7 +1,7 @@
 import { PRODUCT_IMAGES } from '@/constants/images';
 import { router, Stack } from 'expo-router';
 import { FlatList, Image, Pressable, StyleSheet, Text, View } from 'react-native';
-import { MAX_QUANTITY_PER_PRODUCT, useCartStore, useCartTotal } from '../store/cartStore';
+import { MAX_QUANTITY_PER_PRODUCT, MAX_TOTAL_ITEMS, useCartStore, useCartTotal } from '../store/cartStore';
 
 export default function CartScreen() {
   const items = useCartStore((state) => state.items);
@@ -10,22 +10,29 @@ export default function CartScreen() {
   const removeItem = useCartStore((state) => state.removeItem);
   const clearCart = useCartStore((state) => state.clearCart);
   const total = useCartTotal();
+  const totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
+  const reachedTotalLimit = totalItems >= MAX_TOTAL_ITEMS;
 
   return (
     <View style={styles.container}>
       <Stack.Screen options={{ title: 'Carrito' }} />
 
       {items.length > 0 && (
-        <View style={styles.topRow}>
-          <Pressable style={styles.clearButton} onPress={clearCart}>
-            <Text style={styles.clearButtonText}>Vaciar carrito</Text>
-          </Pressable>
-        </View>
-      )}
+  <View style={styles.topRow}>
+    <Pressable style={styles.clearButton} onPress={clearCart}>
+      <Text style={styles.clearButtonText}>Vaciar carrito</Text>
+    </Pressable>
+    {reachedTotalLimit && (
+      <Text style={styles.totalLimitText}>
+        Alcanzaste el máximo de {MAX_TOTAL_ITEMS} productos por pedido.
+      </Text>
+    )}
+  </View>
+)}
 
       {items.length === 0 ? (
         <View style={styles.emptyContainer}>
-          <Text style={styles.emptyText}>Tu carrito está vacío.</Text>
+          <Text style={styles.emptyText}>¿Quieres pedir algo? Añadelo!</Text>
           <Pressable style={styles.backButton} onPress={() => router.back()}>
             <Text style={styles.backButtonText}>Ver productos</Text>
           </Pressable>
@@ -37,7 +44,7 @@ export default function CartScreen() {
             keyExtractor={(item) => item.product.id}
             contentContainerStyle={styles.listContent}
             renderItem={({ item }) => {
-              const reachedLimit = item.quantity >= MAX_QUANTITY_PER_PRODUCT;
+              const reachedLimit = item.quantity >= MAX_QUANTITY_PER_PRODUCT || reachedTotalLimit;
               return (
                 <View style={styles.itemRow}>
                   <Image source={PRODUCT_IMAGES[item.product.image]} style={styles.itemImage} />
@@ -47,6 +54,9 @@ export default function CartScreen() {
                       {item.product.name}
                     </Text>
                     <Text style={styles.itemPrice}>${item.product.price.toFixed(2)}</Text>
+                    {item.product.notes ? (
+  <Text style={styles.itemNote}>Nota: {item.product.notes}</Text>
+) : null}
 
                     <View style={styles.quantityRow}>
                       <Pressable
@@ -138,6 +148,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 12,
   },
+  totalLimitText: {
+  fontSize: 12,
+  color: '#b91c1c',
+  marginTop: 8,
+},
   itemRow: {
     flexDirection: 'row',
     backgroundColor: '#ffffff',
@@ -168,6 +183,12 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginTop: 2,
   },
+  itemNote: {
+  fontSize: 12,
+  color: '#4d7c62',
+  fontStyle: 'italic',
+  marginTop: 2,
+},
   quantityRow: {
     flexDirection: 'row',
     alignItems: 'center',

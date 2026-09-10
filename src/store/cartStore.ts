@@ -2,10 +2,15 @@ import { create } from 'zustand';
 import { Product } from './productsStore';
 
 export const MAX_QUANTITY_PER_PRODUCT = 2;
+export const MAX_TOTAL_ITEMS = 4;
 
 export interface CartItem {
   product: Product;
   quantity: number;
+}
+//funcion para total maximo de productos
+function getTotalQuantity(items: CartItem[]): number {
+  return items.reduce((sum, item) => sum + item.quantity, 0);
 }
 
 interface CartState {
@@ -21,18 +26,20 @@ export const useCartStore = create<CartState>((set) => ({
   items: [],
 
   addItem: (product) =>
-    set((state) => {
-      const existing = state.items.find((item) => item.product.id === product.id);
-      if (existing) {
-        if (existing.quantity >= MAX_QUANTITY_PER_PRODUCT) return state;
-        return {
-          items: state.items.map((item) =>
-            item.product.id === product.id ? { ...item, quantity: item.quantity + 1 } : item
-          ),
-        };
-      }
-      return { items: [...state.items, { product, quantity: 1 }] };
-    }),
+  set((state) => {
+    if (getTotalQuantity(state.items) >= MAX_TOTAL_ITEMS) return state;
+
+    const existing = state.items.find((item) => item.product.id === product.id);
+    if (existing) {
+      if (existing.quantity >= MAX_QUANTITY_PER_PRODUCT) return state;
+      return {
+        items: state.items.map((item) =>
+          item.product.id === product.id ? { ...item, quantity: item.quantity + 1 } : item
+        ),
+      };
+    }
+    return { items: [...state.items, { product, quantity: 1 }] };
+  }),
 
   removeItem: (productId) =>
     set((state) => ({
@@ -40,13 +47,16 @@ export const useCartStore = create<CartState>((set) => ({
     })),
 
   increaseQuantity: (productId) =>
-    set((state) => ({
+  set((state) => {
+    if (getTotalQuantity(state.items) >= MAX_TOTAL_ITEMS) return state;
+    return {
       items: state.items.map((item) =>
         item.product.id === productId && item.quantity < MAX_QUANTITY_PER_PRODUCT
           ? { ...item, quantity: item.quantity + 1 }
           : item
       ),
-    })),
+    };
+  }),
 
   decreaseQuantity: (productId) =>
     set((state) => ({

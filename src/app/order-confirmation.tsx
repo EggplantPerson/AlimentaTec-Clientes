@@ -26,15 +26,20 @@ export default function OrderConfirmationScreen() {
 
         <View style={styles.summaryBox}>
           {items.map((item) => (
-            <View key={item.product.id} style={styles.summaryRow}>
-              <Text style={styles.summaryItemName}>
-                {item.quantity}x {item.product.name}
-              </Text>
-              <Text style={styles.summaryItemPrice}>
-                ${(item.product.price * item.quantity).toFixed(2)}
-              </Text>
-            </View>
-          ))}
+  <View key={item.product.id} style={styles.summaryItemBlock}>
+    <View style={styles.summaryRow}>
+      <Text style={styles.summaryItemName}>
+        {item.quantity}x {item.product.name}
+      </Text>
+      <Text style={styles.summaryItemPrice}>
+        ${(item.product.price * item.quantity).toFixed(2)}
+      </Text>
+    </View>
+    {item.product.notes ? (
+      <Text style={styles.summaryItemNote}>Nota: {item.product.notes}</Text>
+    ) : null}
+  </View>
+))}
 
           <View style={styles.divider} />
 
@@ -90,8 +95,16 @@ const styles = StyleSheet.create({
   summaryRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 8,
+    marginBottom: 2,
   },
+  summaryItemBlock: {
+  marginBottom: 8,
+},
+summaryItemNote: {
+  fontSize: 12,
+  color: '#4d7c62',
+  fontStyle: 'italic',
+},
   summaryItemName: {
     fontSize: 14,
     color: '#14532d',

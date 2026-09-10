@@ -2,7 +2,7 @@ import { Stack, useLocalSearchParams, router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {ActivityIndicator,Alert,Image,Pressable,ScrollView,StyleSheet,Text,TextInput,View,} from 'react-native';
 import { PRODUCT_IMAGES } from '../../constants/images';
-import { useCartStore } from '../../store/cartStore';
+import { MAX_TOTAL_ITEMS, useCartStore } from '../../store/cartStore';
 import { useProductsStore } from '../../store/productsStore';
 import { Ionicons } from '@expo/vector-icons';
 import { useCartItemCount } from '../../store/cartStore';
@@ -17,6 +17,7 @@ export default function ProductDetailScreen() {
   const saving = useProductsStore((state) => state.saving);
   const addItem = useCartStore((state) => state.addItem);
   const cartCount = useCartItemCount();
+  const reachedTotalLimit = cartCount >= MAX_TOTAL_ITEMS;
 
   const [isEditingNote, setIsEditingNote] = useState(false);
   const [noteText, setNoteText] = useState('');
@@ -114,14 +115,24 @@ export default function ProductDetailScreen() {
         </View>
 
         <View style={styles.priceRow}>
-          <Text style={styles.price}>${displayedProduct.price.toFixed(2)}</Text>
+  <Text style={styles.price}>${displayedProduct.price.toFixed(2)}</Text>
 
-          {displayedProduct.available && (
-            <Pressable style={styles.addToCartButton} onPress={handleAddToCart}>
-              <Text style={styles.addToCartButtonText}>Agregar</Text>
-            </Pressable>
-          )}
-        </View>
+  {displayedProduct.available && (
+    <Pressable
+      style={[styles.addToCartButton, reachedTotalLimit && styles.addToCartButtonDisabled]}
+      onPress={handleAddToCart}
+      disabled={reachedTotalLimit}
+    >
+      <Text style={styles.addToCartButtonText}>Agregar</Text>
+    </Pressable>
+  )}
+</View>
+
+{reachedTotalLimit && (
+  <Text style={styles.totalLimitText}>
+    Alcanzaste el máximo de {MAX_TOTAL_ITEMS} productos por pedido.
+  </Text>
+)}
 
         <Text style={styles.sectionTitle}>Descripción</Text>
         <Text style={styles.description}>{displayedProduct.description}</Text>
@@ -295,6 +306,14 @@ headerCartBadgeText: {
     fontWeight: '700',
     fontSize: 13,
   },
+  addToCartButtonDisabled: {
+  backgroundColor: '#a7c4b3',
+},
+totalLimitText: {
+  fontSize: 12,
+  color: '#b91c1c',
+  marginTop: 6,
+},
   sectionTitle: {
     fontSize: 14,
     fontWeight: '700',
