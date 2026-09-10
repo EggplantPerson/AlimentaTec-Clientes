@@ -1,18 +1,11 @@
-import { Stack, useLocalSearchParams } from 'expo-router';
+import { Stack, useLocalSearchParams, router } from 'expo-router';
 import { useEffect, useState } from 'react';
-import {
-  ActivityIndicator,
-  Alert,
-  Image,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
+import {ActivityIndicator,Alert,Image,Pressable,ScrollView,StyleSheet,Text,TextInput,View,} from 'react-native';
 import { PRODUCT_IMAGES } from '../../constants/images';
+import { useCartStore } from '../../store/cartStore';
 import { useProductsStore } from '../../store/productsStore';
+import { Ionicons } from '@expo/vector-icons';
+import { useCartItemCount } from '../../store/cartStore';
 
 export default function ProductDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -22,6 +15,8 @@ export default function ProductDetailScreen() {
   const updateProduct = useProductsStore((state) => state.updateProduct);
   const loading = useProductsStore((state) => state.loading);
   const saving = useProductsStore((state) => state.saving);
+  const addItem = useCartStore((state) => state.addItem);
+  const cartCount = useCartItemCount();
 
   const [isEditingNote, setIsEditingNote] = useState(false);
   const [noteText, setNoteText] = useState('');
@@ -54,6 +49,11 @@ export default function ProductDetailScreen() {
     setIsEditingNote(false);
   }
 
+  function handleAddToCart() {
+    if (!displayedProduct) return;
+    addItem(displayedProduct);
+  }
+
   if (loading && !displayedProduct) {
     return <ActivityIndicator style={styles.centered} size="large" color="#15803d" />;
   }
@@ -71,19 +71,35 @@ export default function ProductDetailScreen() {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Stack.Screen options={{ title: displayedProduct.name }} />
+      <Stack.Screen
+  options={{
+    title: displayedProduct.name,
+    headerStyle: { backgroundColor: '#15803d' },
+    headerTitleStyle: { color: '#fffdfd', fontWeight: '700' },
+    headerRight: () => (
+      <Pressable style={styles.headerCartButton} onPress={() => router.push('/cart')}>
+        <Ionicons name="cart-outline" size={22} color="#fff" />
+        {cartCount > 0 && (
+          <View style={styles.headerCartBadge}>
+            <Text style={styles.headerCartBadgeText}>{cartCount}</Text>
+          </View>
+        )}
+      </Pressable>
+    ),
+  }}
+/>
 
-      <Image source={PRODUCT_IMAGES[displayedProduct.image]} style={styles.image} />
-
+      
       <View style={styles.body}>
+        <Image source={PRODUCT_IMAGES[displayedProduct.image]} style={styles.image} resizeMode="cover"/>
         <View style={styles.headerRow}>
-          <Text style={styles.name}>{displayedProduct.name}</Text>
           <View
             style={[
               styles.badge,
               displayedProduct.available ? styles.badgeAvailable : styles.badgeUnavailable,
             ]}
           >
+
             <Text
               style={[
                 styles.badgeText,
@@ -97,8 +113,15 @@ export default function ProductDetailScreen() {
           </View>
         </View>
 
-        <Text style={styles.category}>{displayedProduct.category}</Text>
-        <Text style={styles.price}>${displayedProduct.price.toFixed(2)}</Text>
+        <View style={styles.priceRow}>
+          <Text style={styles.price}>${displayedProduct.price.toFixed(2)}</Text>
+
+          {displayedProduct.available && (
+            <Pressable style={styles.addToCartButton} onPress={handleAddToCart}>
+              <Text style={styles.addToCartButtonText}>Agregar</Text>
+            </Pressable>
+          )}
+        </View>
 
         <Text style={styles.sectionTitle}>Descripción</Text>
         <Text style={styles.description}>{displayedProduct.description}</Text>
@@ -155,10 +178,11 @@ export default function ProductDetailScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f0fdf4',
+    backgroundColor: '#15803d',
   },
   content: {
     paddingBottom: 32,
+    flexGrow: 2,
   },
   centered: {
     flex: 1,
@@ -173,14 +197,19 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   image: {
-    width: '100%',
-    height: 260,
+    width: '82%',
+    height: 220,
+    alignSelf: 'center',
+    borderRadius: 30,
     backgroundColor: '#e6f7ec',
+    marginTop: 30,
+    marginBottom: 30,
   },
   body: {
+    flex: 2,
     padding: 20,
     backgroundColor: '#ffffff',
-    marginTop: -20,
+    marginTop: 20,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
   },
@@ -222,11 +251,49 @@ const styles = StyleSheet.create({
     color: '#4d7c62',
     marginTop: 6,
   },
+  priceRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 10,
+  },
   price: {
     fontSize: 20,
     fontWeight: '700',
     color: '#15803d',
-    marginTop: 10,
+  },
+  addToCartButton: {
+    alignItems: 'center',
+    backgroundColor: '#15803d',
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+  },
+  headerCartButton: {
+  marginRight: 12,
+  padding: 4,
+},
+headerCartBadge: {
+  position: 'absolute',
+  top: -4,
+  right: -4,
+  minWidth: 16,
+  height: 16,
+  borderRadius: 8,
+  backgroundColor: '#14532d',
+  justifyContent: 'center',
+  alignItems: 'center',
+  paddingHorizontal: 3,
+},
+headerCartBadgeText: {
+  color: '#fff',
+  fontSize: 9,
+  fontWeight: '700',
+},
+  addToCartButtonText: {
+    color: '#fff',
+    fontWeight: '700',
+    fontSize: 13,
   },
   sectionTitle: {
     fontSize: 14,

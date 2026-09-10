@@ -1,8 +1,18 @@
-import { Stack } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
+import { router, Stack } from 'expo-router';
 import { useMemo, useState } from 'react';
 import {ActivityIndicator,FlatList,Pressable,ScrollView,StyleSheet,Text,TextInput,View,} from 'react-native';
 import ProductCard from '../../components/ProductCard';
+import { useCartItemCount } from '../../store/cartStore';
 import {useCategories,useFilteredProducts,useLoadProducts,useProductsStore,} from '../../store/productsStore';
+
+const CATEGORY_ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
+  Todos: 'apps-outline',
+  Disponibles: 'checkmark-circle-outline',
+  Comida: 'fast-food-outline',
+  Bebida: 'cafe-outline',
+  Snack: 'nutrition-outline',
+};
 
 export default function ProductsScreen() {
   useLoadProducts();
@@ -11,6 +21,7 @@ export default function ProductsScreen() {
   const setCategory = useProductsStore((state) => state.setCategory);
   const loading = useProductsStore((state) => state.loading);
   const error = useProductsStore((state) => state.error);
+  const cartCount = useCartItemCount();
 
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -26,31 +37,37 @@ export default function ProductsScreen() {
 
   return (
     <View style={styles.container}>
-      <Stack.Screen options={{ title: 'Productos' }} />
+      <Stack.Screen options={{ headerShown: false }} />
 
-      <View style={styles.headerRow}>
-        <Text style={styles.title}>Productos</Text>
-      </View>
+      <View style={styles.topBar}>
+        <View style={styles.searchContainer}>
+          <Ionicons name="search" size={16} color="#166534" style={styles.searchIcon} />
+          <TextInput
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            placeholder="Buscar"
+            placeholderTextColor="#4d7c62"
+            style={styles.searchInput}
+          />
+          {searchQuery.length > 0 && (
+            <Pressable onPress={() => setSearchQuery('')} style={styles.clearButton}>
+              <Ionicons name="close-circle" size={18} color="#4d7c62" />
+            </Pressable>
+          )}
+        </View>
 
-      {/* Buscador */}
-      <View style={styles.searchContainer}>
-        <TextInput
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-          placeholder="Buscar producto..."
-          placeholderTextColor="#6b9c80"
-          style={styles.searchInput}
-        />
-        {searchQuery.length > 0 && (
-          <Pressable onPress={() => setSearchQuery('')} style={styles.clearButton}>
-            <Text style={styles.clearButtonText}>✕</Text>
-          </Pressable>
-        )}
+        <Pressable style={styles.cartButton} onPress={() => router.push('/cart')}>
+          <Ionicons name="cart-outline" size={20} color="#15803d" />
+          {cartCount > 0 && (
+            <View style={styles.cartBadge}>
+              <Text style={styles.cartBadgeText}>{cartCount}</Text>
+            </View>
+          )}
+        </Pressable>
       </View>
 
       {error && <Text style={styles.errorText}>{error}</Text>}
 
-      {/* Listado de categorías */}
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
@@ -58,24 +75,31 @@ export default function ProductsScreen() {
         style={styles.categoriesScroll}
       >
         {categories.map((category) => {
-          const isSelected = category === selectedCategory;
-          return (
-            <Pressable
-              key={category}
-              onPress={() => setCategory(category)}
-              style={[styles.chip, isSelected && styles.chipSelected]}
-            >
-              <Text
-                style={[
-                  styles.chipText,
-                  isSelected && styles.chipTextSelected,
-                ]}
-              >
-                {category}
-              </Text>
-            </Pressable>
-          );
-        })}
+  const isSelected = category === selectedCategory;
+  const iconName = CATEGORY_ICONS[category] ?? 'pricetag-outline';
+  return (
+    <Pressable
+      key={category}
+      onPress={() => setCategory(category)}
+      style={[styles.chip, isSelected && styles.chipSelected]}
+    >
+      <Ionicons
+        name={iconName}
+        size={14}
+        color={isSelected ? '#fff' : '#166534'}
+        style={styles.chipIcon}
+      />
+      <Text
+        style={[
+          styles.chipText,
+          isSelected && styles.chipTextSelected,
+        ]}
+      >
+        {category}
+      </Text>
+    </Pressable>
+  );
+})}
       </ScrollView>
 
       {loading ? (
@@ -104,29 +128,23 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f0fdf4',
   },
-  headerRow: {
+  topBar: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
+    gap: 10,
     padding: 16,
-    paddingBottom: 8,
-    backgroundColor: '#f0fdf4',
-  },
-  title: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: '#14532d',
+    backgroundColor: '#15803d',
   },
   searchContainer: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    marginHorizontal: 16,
-    marginBottom: 8,
     backgroundColor: '#ffffff',
     borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#bbf7d0',
-    paddingHorizontal: 14,
+    paddingHorizontal: 12,
+  },
+  searchIcon: {
+    marginRight: 6,
   },
   searchInput: {
     flex: 1,
@@ -135,18 +153,38 @@ const styles = StyleSheet.create({
     color: '#14532d',
   },
   clearButton: {
-    paddingLeft: 8,
+    paddingLeft: 6,
     paddingVertical: 6,
   },
-  clearButtonText: {
-    fontSize: 14,
-    color: '#4d7c62',
+  cartButton: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: '#ffffff',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  cartBadge: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: '#14532d',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 3,
+  },
+  cartBadgeText: {
+    color: '#fff',
+    fontSize: 10,
     fontWeight: '700',
   },
   errorText: {
     color: '#b91c1c',
     paddingHorizontal: 16,
-    paddingBottom: 8,
+    paddingTop: 8,
   },
   loading: {
     marginTop: 40,
@@ -163,16 +201,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   chip: {
-    height: 36,
-    justifyContent: 'center',
-    alignSelf: 'center',
-    paddingHorizontal: 14,
-    borderRadius: 999,
-    backgroundColor: '#dcfce7',
-    marginRight: 8,
-    borderWidth: 1,
-    borderColor: '#bbf7d0',
-  },
+  flexDirection: 'row',
+  alignItems: 'center',
+  height: 36,
+  justifyContent: 'center',
+  alignSelf: 'center',
+  paddingHorizontal: 14,
+  borderRadius: 999,
+  backgroundColor: '#dcfce7',
+  marginRight: 8,
+  borderWidth: 1,
+  borderColor: '#bbf7d0',
+},
   chipSelected: {
     backgroundColor: '#15803d',
     borderColor: '#15803d',
@@ -182,6 +222,9 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#166534',
   },
+  chipIcon: {
+  marginRight: 6,
+},
   chipTextSelected: {
     color: '#fff',
   },

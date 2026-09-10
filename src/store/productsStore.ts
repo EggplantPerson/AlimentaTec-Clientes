@@ -12,10 +12,11 @@ export interface Product {
   category: string;
   notes: string;
 }
-//
+
 export type ProductInput = Omit<Product, 'id'>;
 
 export const ALL_CATEGORIES_LABEL = 'Todos';
+export const AVAILABLE_FILTER_LABEL = 'Disponibles';
 
 interface ProductsState {
   products: Product[];
@@ -113,7 +114,7 @@ export function useCategories(): string[] {
 
   return useMemo(() => {
     const unique = Array.from(new Set(categories.length ? categories : products.map((p) => p.category)));
-    return [ALL_CATEGORIES_LABEL, ...unique];
+    return [ALL_CATEGORIES_LABEL, AVAILABLE_FILTER_LABEL, ...unique];
   }, [categories, products]);
 }
 
@@ -123,6 +124,9 @@ export function useFilteredProducts(): Product[] {
 
   if (selectedCategory === ALL_CATEGORIES_LABEL) {
     return products;
+  }
+  if (selectedCategory === AVAILABLE_FILTER_LABEL) {
+    return products.filter((p) => p.available);
   }
   return products.filter((p) => p.category === selectedCategory);
 }

@@ -1,6 +1,8 @@
 import { create } from 'zustand';
 import { Product } from './productsStore';
 
+export const MAX_QUANTITY_PER_PRODUCT = 2;
+
 export interface CartItem {
   product: Product;
   quantity: number;
@@ -22,6 +24,7 @@ export const useCartStore = create<CartState>((set) => ({
     set((state) => {
       const existing = state.items.find((item) => item.product.id === product.id);
       if (existing) {
+        if (existing.quantity >= MAX_QUANTITY_PER_PRODUCT) return state;
         return {
           items: state.items.map((item) =>
             item.product.id === product.id ? { ...item, quantity: item.quantity + 1 } : item
@@ -39,7 +42,9 @@ export const useCartStore = create<CartState>((set) => ({
   increaseQuantity: (productId) =>
     set((state) => ({
       items: state.items.map((item) =>
-        item.product.id === productId ? { ...item, quantity: item.quantity + 1 } : item
+        item.product.id === productId && item.quantity < MAX_QUANTITY_PER_PRODUCT
+          ? { ...item, quantity: item.quantity + 1 }
+          : item
       ),
     })),
 
