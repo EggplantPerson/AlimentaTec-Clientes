@@ -195,15 +195,22 @@ export function useFilteredProducts(): Product[] {
   const products = useProductsStore((state) => state.products);
   const selectedCategory = useProductsStore((state) => state.selectedCategory);
 
-  if (selectedCategory === ALL_CATEGORIES_LABEL) {
-    return products;
-  }
+  return useMemo(() => {
+    let list = products;
 
-  if (selectedCategory === AVAILABLE_FILTER_LABEL) {
-    return products.filter((product) => product.available);
-  }
+    if (selectedCategory === AVAILABLE_FILTER_LABEL) {
+      list = products.filter((product) => product.available);
+    } else if (selectedCategory !== ALL_CATEGORIES_LABEL) {
+      list = products.filter(
+        (product) => product.category === selectedCategory,
+      );
+    }
 
-  return products.filter((product) => product.category === selectedCategory);
+    return [...list].sort((a, b) => {
+      if (a.available === b.available) return 0;
+      return a.available ? -1 : 1;
+    });
+  }, [products, selectedCategory]);
 }
 
 export function useLoadProducts(): void {

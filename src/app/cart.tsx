@@ -24,6 +24,10 @@ export default function CartScreen() {
   const totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
   const reachedTotalLimit = totalItems >= MAX_TOTAL_ITEMS;
 
+  const handleCreateOrder = () => {
+    router.push("/order-confirmation");
+  };
+
   return (
     <View style={styles.container}>
       <Stack.Screen
@@ -134,10 +138,7 @@ export default function CartScreen() {
               <Text style={styles.totalValue}>${total.toFixed(2)}</Text>
             </View>
 
-            <Pressable
-              style={styles.orderButton}
-              onPress={() => router.push("/order-confirmation")}
-            >
+            <Pressable style={styles.orderButton} onPress={handleCreateOrder}>
               <Text style={styles.orderButtonText}>Ordenar ahora</Text>
             </Pressable>
           </View>

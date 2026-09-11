@@ -1,6 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { router, Stack } from "expo-router";
 import { Pressable, StyleSheet, Text, View } from "react-native";
+import { createOrder } from "../services/orders.service";
 import { useCartStore, useCartTotal } from "../store/cartStore";
 import { useOrdersStore } from "../store/orderStore";
 
@@ -10,11 +11,30 @@ export default function OrderConfirmationScreen() {
   const total = useCartTotal();
   const addOrder = useOrdersStore((state) => state.addOrder);
 
-  function handleConfirmOrder() {
-    const orderId = addOrder(items, total);
-    clearCart();
+  async function handleConfirmOrder() {
+    try {
+      const uid = `order-${Date.now()}`;
+      const id = Math.floor(Math.random() * 1000000000);
 
-    router.replace(`/order-confirmed?orderId=${orderId}`);
+      const products = items.map(
+        (item) => `${item.product.name} x${item.quantity}`,
+      );
+
+      await createOrder({
+        uid,
+        id,
+        products,
+        total,
+      });
+
+      const orderId = addOrder(items, total);
+
+      clearCart();
+
+      router.replace(`/order-confirmed?orderId=${orderId}`);
+    } catch (error) {
+      console.log("Error al confirmar la orden:", error);
+    }
   }
 
   return (

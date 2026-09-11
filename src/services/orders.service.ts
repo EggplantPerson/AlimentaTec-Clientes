@@ -1,11 +1,5 @@
 const API_URL = `${process.env.EXPO_PUBLIC_API_URL}/orders`;
 
-export async function getOrder(uid: string) {
-  const res = await fetch(API_URL);
-  if (!res.ok) throw new Error("Failed to fetch order");
-  return res.json();
-}
-
 export async function createOrder(data: {
   uid: string;
   id: number;
@@ -14,9 +8,19 @@ export async function createOrder(data: {
 }) {
   const res = await fetch(API_URL, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+    },
     body: JSON.stringify(data),
   });
-  if (!res.ok) throw new Error("Failed to create order");
-  return res.json();
+
+  const responseText = await res.text();
+
+  console.log("Respuesta del servidor:", res.status, responseText);
+
+  if (!res.ok) {
+    throw new Error(responseText || "Failed to create order");
+  }
+
+  return JSON.parse(responseText);
 }
