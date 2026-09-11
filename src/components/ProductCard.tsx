@@ -37,7 +37,7 @@ export default function ProductCard({ product }: ProductCardProps) {
           </View>
         </View>
 
-        <Text style={styles.category}>{product.category}</Text>
+
 
         <Text style={styles.description} numberOfLines={2}>
           {product.description}

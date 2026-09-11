@@ -15,7 +15,7 @@ export default function CartScreen() {
 
   return (
     <View style={styles.container}>
-      <Stack.Screen options={{ title: 'Carrito' }} />
+      <Stack.Screen options={{ title: 'Carrito', headerStyle: { backgroundColor: '#15803d' },headerTitleStyle: { color: '#fafafa', fontWeight: '700' }}} />
 
       {items.length > 0 && (
   <View style={styles.topRow}>
