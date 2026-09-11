@@ -16,9 +16,13 @@ export default function OrderConfirmationScreen() {
       const uid = `order-${Date.now()}`;
       const id = Math.floor(Math.random() * 1000000000);
 
-      const products = items.map(
-        (item) => `${item.product.name} x${item.quantity}`,
-      );
+      const products: string[] = [];
+
+      items.forEach((item) => {
+        for (let i = 0; i < item.quantity; i++) {
+          products.push(String(item.product.id));
+        }
+      });
 
       await createOrder({
         uid,

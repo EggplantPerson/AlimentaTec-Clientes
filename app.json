@@ -1,10 +1,10 @@
 {
   "expo": {
-    "name": "products-app",
-    "slug": "products-app",
+    "name": "Alimentatec",
+    "slug": "Alimentatec",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/loading/tenor.gif",
+    "icon": "./assets/images/loading/logo-cafe.avif",
     "scheme": "productsapp",
     "userInterfaceStyle": "automatic",
     "android": {
