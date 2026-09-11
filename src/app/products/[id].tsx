@@ -14,8 +14,9 @@ import {
   TextInput,
   View,
 } from "react-native";
-import { PRODUCT_IMAGES } from "../../constants/images";
+
 import {
+  MAX_QUANTITY_PER_PRODUCT,
   MAX_TOTAL_ITEMS,
   useCartItemCount,
   useCartStore,
@@ -33,17 +34,24 @@ export default function ProductDetailScreen() {
   const loading = useProductsStore((state) => state.loading);
   const saving = useProductsStore((state) => state.saving);
   const addItem = useCartStore((state) => state.addItem);
+  const cartItems = useCartStore((state) => state.items);
   const cartCount = useCartItemCount();
   const reachedTotalLimit = cartCount >= MAX_TOTAL_ITEMS;
 
   const [isEditingNote, setIsEditingNote] = useState(false);
   const [noteText, setNoteText] = useState("");
+  const [showCartNotification, setShowCartNotification] = useState(false);
 
   useEffect(() => {
     if (id) void selectProduct(id);
   }, [id, selectProduct]);
 
   const displayedProduct = product ?? selectedProduct;
+  const currentProductQuantity =
+    cartItems.find((item) => item.product.id === displayedProduct?.id)
+      ?.quantity ?? 0;
+  const reachedProductLimit =
+    currentProductQuantity >= MAX_QUANTITY_PER_PRODUCT;
 
   useEffect(() => {
     if (displayedProduct) {
@@ -69,7 +77,14 @@ export default function ProductDetailScreen() {
 
   function handleAddToCart() {
     if (!displayedProduct) return;
+
     addItem(displayedProduct);
+
+    setShowCartNotification(true);
+
+    setTimeout(() => {
+      setShowCartNotification(false);
+    }, 3000);
   }
 
   if (loading && !displayedProduct) {
@@ -122,7 +137,7 @@ export default function ProductDetailScreen() {
 
         <View style={styles.body}>
           <Image
-            source={PRODUCT_IMAGES[displayedProduct.image]}
+            source={{ uri: displayedProduct.image }}
             style={styles.image}
             resizeMode="cover"
           />
@@ -157,17 +172,25 @@ export default function ProductDetailScreen() {
               <Pressable
                 style={[
                   styles.addToCartButton,
-                  reachedTotalLimit && styles.addToCartButtonDisabled,
+                  (reachedTotalLimit || reachedProductLimit) &&
+                    styles.addToCartButtonDisabled,
                 ]}
                 onPress={handleAddToCart}
-                disabled={reachedTotalLimit}
+                disabled={reachedTotalLimit || reachedProductLimit}
               >
                 <Text style={styles.addToCartButtonText}>Agregar</Text>
               </Pressable>
             )}
           </View>
 
-          {reachedTotalLimit && (
+          {reachedProductLimit && (
+            <Text style={styles.totalLimitText}>
+              Alcanzaste el máximo de {MAX_QUANTITY_PER_PRODUCT} unidades para
+              este producto.
+            </Text>
+          )}
+
+          {!reachedProductLimit && reachedTotalLimit && (
             <Text style={styles.totalLimitText}>
               Alcanzaste el máximo de {MAX_TOTAL_ITEMS} productos por pedido.
             </Text>
@@ -176,53 +199,66 @@ export default function ProductDetailScreen() {
           <Text style={styles.sectionTitle}>Descripción</Text>
           <Text style={styles.description}>{displayedProduct.description}</Text>
 
-          <Text style={styles.sectionTitle}>Nota</Text>
+          {displayedProduct.available && (
+            <>
+              <Text style={styles.sectionTitle}>Nota</Text>
 
-          {isEditingNote ? (
-            <View>
-              <TextInput
-                value={noteText}
-                onChangeText={setNoteText}
-                style={[styles.input, styles.multiline]}
-                placeholder="Ej. Sin lechuga, sin cebolla..."
-                placeholderTextColor="#6b9c80"
-                multiline
-                autoFocus
-              />
-              <View style={styles.noteButtonsRow}>
-                <Pressable
-                  style={[styles.noteButton, styles.cancelButton]}
-                  onPress={handleCancelNote}
-                  disabled={saving}
-                >
-                  <Text style={styles.cancelButtonText}>Cancelar</Text>
-                </Pressable>
-                <Pressable
-                  style={[styles.noteButton, styles.saveButton]}
-                  onPress={handleSaveNote}
-                  disabled={saving}
-                >
-                  <Text style={styles.saveButtonText}>
-                    {saving ? "Guardando..." : "Guardar nota"}
+              {isEditingNote ? (
+                <View>
+                  <TextInput
+                    value={noteText}
+                    onChangeText={setNoteText}
+                    style={[styles.input, styles.multiline]}
+                    placeholder="Ej. Sin lechuga, sin cebolla..."
+                    placeholderTextColor="#6b9c80"
+                    multiline
+                    autoFocus
+                    maxLength={50}
+                  />
+                  <View style={styles.noteButtonsRow}>
+                    <Pressable
+                      style={[styles.noteButton, styles.cancelButton]}
+                      onPress={handleCancelNote}
+                      disabled={saving}
+                    >
+                      <Text style={styles.cancelButtonText}>Cancelar</Text>
+                    </Pressable>
+                    <Pressable
+                      style={[styles.noteButton, styles.saveButton]}
+                      onPress={handleSaveNote}
+                      disabled={saving}
+                    >
+                      <Text style={styles.saveButtonText}>
+                        {saving ? "Guardando..." : "Guardar nota"}
+                      </Text>
+                    </Pressable>
+                  </View>
+                </View>
+              ) : (
+                <View style={styles.noteContainer}>
+                  <Text style={styles.noteText}>
+                    {displayedProduct.notes
+                      ? displayedProduct.notes
+                      : "Sin notas para este producto."}
                   </Text>
-                </Pressable>
-              </View>
-            </View>
-          ) : (
-            <View style={styles.noteContainer}>
-              <Text style={styles.noteText}>
-                {displayedProduct.notes
-                  ? displayedProduct.notes
-                  : "Sin notas para este producto."}
+                  <Pressable
+                    style={styles.editNoteButton}
+                    onPress={() => setIsEditingNote(true)}
+                  >
+                    <Text style={styles.editNoteButtonText}>
+                      {displayedProduct.notes ? "Editar nota" : "Agregar nota"}
+                    </Text>
+                  </Pressable>
+                </View>
+              )}
+            </>
+          )}
+          {showCartNotification && (
+            <View style={styles.cartNotification}>
+              <Ionicons name="checkmark-circle" size={22} color="#15803d" />
+              <Text style={styles.cartNotificationText}>
+                Producto agregado al carrito
               </Text>
-              <Pressable
-                style={styles.editNoteButton}
-                onPress={() => setIsEditingNote(true)}
-              >
-                <Text style={styles.editNoteButtonText}>
-                  {displayedProduct.notes ? "Editar nota" : "Agregar nota"}
-                </Text>
-              </Pressable>
             </View>
           )}
         </View>
@@ -436,5 +472,32 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontWeight: "700",
     fontSize: 13,
+  },
+  cartNotification: {
+    position: "absolute",
+    bottom: 25,
+    left: 20,
+    right: 20,
+    backgroundColor: "#f0fdf4",
+    borderRadius: 12,
+    padding: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    elevation: 5,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+  },
+
+  cartNotificationText: {
+    color: "#15803d",
+    fontSize: 14,
+    fontWeight: "700",
   },
 });

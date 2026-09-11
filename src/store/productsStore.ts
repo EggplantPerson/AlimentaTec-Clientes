@@ -1,6 +1,6 @@
-import { useEffect, useMemo } from 'react';
-import { create } from 'zustand';
-import productsData from '../data/products.json';
+import { useEffect, useMemo } from "react";
+import { create } from "zustand";
+import { getProducts } from "../services/product.service";
 
 export interface Product {
   id: string;
@@ -13,10 +13,10 @@ export interface Product {
   notes: string;
 }
 
-export type ProductInput = Omit<Product, 'id'>;
+export type ProductInput = Omit<Product, "id">;
 
-export const ALL_CATEGORIES_LABEL = 'Todos';
-export const AVAILABLE_FILTER_LABEL = 'Disponibles';
+export const ALL_CATEGORIES_LABEL = "Todos";
+export const AVAILABLE_FILTER_LABEL = "Disponibles";
 
 interface ProductsState {
   products: Product[];
@@ -37,8 +37,8 @@ interface ProductsState {
 }
 
 export const useProductsStore = create<ProductsState>((set, get) => ({
-  products: productsData as Product[],
-  categories: Array.from(new Set((productsData as Product[]).map((product) => product.category))),
+  products: [],
+  categories: [],
   selectedProduct: undefined,
   selectedCategory: ALL_CATEGORIES_LABEL,
   loading: false,
@@ -49,63 +49,129 @@ export const useProductsStore = create<ProductsState>((set, get) => ({
 
   loadProducts: async () => {
     set({ loading: true, error: null });
-    await Promise.resolve();
-    set({ products: [...get().products], loading: false });
+
+    try {
+      const data = await getProducts();
+
+      const products: Product[] = data.map((product: any) => ({
+        id: String(product.id),
+        name: product.name,
+        description: product.description,
+        image: product.image_url,
+        price: Number(product.price),
+        available: product.available,
+        category: product.category,
+        notes: "",
+      }));
+
+      set({
+        products,
+        loading: false,
+        error: null,
+      });
+    } catch (error) {
+      console.log("Error al cargar productos:", error);
+
+      set({
+        products: [],
+        loading: false,
+        error: "No se pudieron cargar los productos",
+      });
+    }
   },
 
   loadCategories: async () => {
-    await Promise.resolve();
-    set({ categories: Array.from(new Set(get().products.map((product) => product.category))) });
+    const products = get().products;
+
+    set({
+      categories: Array.from(
+        new Set(products.map((product) => product.category)),
+      ),
+    });
   },
 
   selectProduct: async (id) => {
     const product = get().products.find((item) => item.id === id);
+
     if (product) {
       set({ selectedProduct: product });
       return product;
     }
 
-    set({ selectedProduct: undefined, loading: true, error: null });
-    await Promise.resolve();
-    const selectedProduct = get().products.find((item) => item.id === id);
-    set({ selectedProduct, loading: false });
-    return selectedProduct;
+    set({ selectedProduct: undefined });
+    return undefined;
   },
 
   createProduct: async (product) => {
     set({ saving: true, error: null });
-    await Promise.resolve();
-    const ids = get().products.map((item) => Number(item.id)).filter(Number.isFinite);
-    const newProduct: Product = { id: String(Math.max(0, ...ids) + 1), ...product };
-    set((state) => {
-      const products = [...state.products, newProduct];
-      return {
-        products,
-        categories: Array.from(new Set(products.map((item) => item.category))),
-        selectedProduct: newProduct,
-        saving: false,
+
+    try {
+      const newProduct: Product = {
+        id: String(Date.now()),
+        ...product,
       };
-    });
+
+      set((state) => {
+        const products = [...state.products, newProduct];
+
+        return {
+          products,
+          categories: Array.from(
+            new Set(products.map((item) => item.category)),
+          ),
+          selectedProduct: newProduct,
+          saving: false,
+        };
+      });
+    } catch (error) {
+      set({
+        saving: false,
+        error: "No se pudo crear el producto",
+      });
+    }
   },
 
   updateProduct: async (id, product) => {
     set({ saving: true, error: null });
-    await Promise.resolve();
-    set((state) => {
-      const updatedProduct = state.products.find((item) => item.id === id);
-      if (!updatedProduct) return { saving: false };
-      const nextProduct = { ...updatedProduct, ...product };
-      const products = state.products.map((item) => (item.id === id ? nextProduct : item));
-      return {
-        products,
-        categories: Array.from(new Set(products.map((item) => item.category))),
-        selectedProduct: nextProduct,
+
+    try {
+      set((state) => {
+        const updatedProduct = state.products.find((item) => item.id === id);
+
+        if (!updatedProduct) {
+          return {
+            saving: false,
+            error: "Producto no encontrado",
+          };
+        }
+
+        const nextProduct = {
+          ...updatedProduct,
+          ...product,
+        };
+
+        const products = state.products.map((item) =>
+          item.id === id ? nextProduct : item,
+        );
+
+        return {
+          products,
+          categories: Array.from(
+            new Set(products.map((item) => item.category)),
+          ),
+          selectedProduct: nextProduct,
+          saving: false,
+        };
+      });
+    } catch (error) {
+      set({
         saving: false,
-      };
-    });
+        error: "No se pudo actualizar el producto",
+      });
+    }
   },
 
-  getProductById: (id) => get().products.find((p) => p.id === id),
+  getProductById: (id) => get().products.find((product) => product.id === id),
 }));
 
 export function useCategories(): string[] {
@@ -113,7 +179,14 @@ export function useCategories(): string[] {
   const categories = useProductsStore((state) => state.categories);
 
   return useMemo(() => {
-    const unique = Array.from(new Set(categories.length ? categories : products.map((p) => p.category)));
+    const unique = Array.from(
+      new Set(
+        categories.length
+          ? categories
+          : products.map((product) => product.category),
+      ),
+    );
+
     return [ALL_CATEGORIES_LABEL, AVAILABLE_FILTER_LABEL, ...unique];
   }, [categories, products]);
 }
@@ -125,18 +198,18 @@ export function useFilteredProducts(): Product[] {
   if (selectedCategory === ALL_CATEGORIES_LABEL) {
     return products;
   }
+
   if (selectedCategory === AVAILABLE_FILTER_LABEL) {
-    return products.filter((p) => p.available);
+    return products.filter((product) => product.available);
   }
-  return products.filter((p) => p.category === selectedCategory);
+
+  return products.filter((product) => product.category === selectedCategory);
 }
 
 export function useLoadProducts(): void {
   const loadProducts = useProductsStore((state) => state.loadProducts);
-  const loadCategories = useProductsStore((state) => state.loadCategories);
 
   useEffect(() => {
     void loadProducts();
-    void loadCategories();
-  }, [loadCategories, loadProducts]);
+  }, [loadProducts]);
 }

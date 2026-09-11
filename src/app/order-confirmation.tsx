@@ -9,15 +9,10 @@ export default function OrderConfirmationScreen() {
   const clearCart = useCartStore((state) => state.clearCart);
   const total = useCartTotal();
   const addOrder = useOrdersStore((state) => state.addOrder);
-  const updateOrderStatus = useOrdersStore((state) => state.updateOrderStatus);
 
   function handleConfirmOrder() {
     const orderId = addOrder(items, total);
     clearCart();
-
-    setTimeout(() => updateOrderStatus(orderId, "En preparación"), 5000);
-    setTimeout(() => updateOrderStatus(orderId, "Listo"), 12000);
-    setTimeout(() => updateOrderStatus(orderId, "Entregado"), 20000);
 
     router.replace(`/order-confirmed?orderId=${orderId}`);
   }
@@ -166,7 +161,6 @@ const styles = StyleSheet.create({
     fontSize: 15,
   },
   backButton: {
-    color: "#dcfce7",
     alignItems: "center",
     padding: 10,
   },
