@@ -2,17 +2,22 @@ import { Ionicons } from "@expo/vector-icons";
 import { router, Stack, useLocalSearchParams } from "expo-router";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import {
-    formatOrderDate,
-    formatOrderNumber,
-    useOrdersStore,
+  formatOrderDate,
+  formatOrderNumber,
+  useOrdersStore,
 } from "../store/orderStore";
 
+// Pantalla de éxito tras realizar un pedido exitosamente
 export default function OrderConfirmedScreen() {
+  // Obtención del ID del pedido desde los parámetros de la URL
   const { orderId } = useLocalSearchParams<{ orderId: string }>();
+
+  // Búsqueda del pedido correspondiente en la store de pedidos
   const order = useOrdersStore((state) =>
     state.orders.find((o) => o.id === orderId),
   );
 
+  // Manejo de estado de en caso de no encontrar la orden
   if (!order) {
     return (
       <View style={styles.container}>
@@ -24,8 +29,10 @@ export default function OrderConfirmedScreen() {
 
   return (
     <View style={styles.container}>
+      {/* Ocultar la barra de navegación superior en esta pantalla de éxito */}
       <Stack.Screen options={{ headerShown: false }} />
 
+      {/* Icono de confirmación exitosa */}
       <Ionicons
         name="checkmark-circle"
         size={72}
@@ -33,16 +40,20 @@ export default function OrderConfirmedScreen() {
         style={styles.icon}
       />
 
+      {/* Título de confirmación */}
       <Text style={styles.title}>¡Orden Confirmada!</Text>
 
+      {/* Número asignado a la orden */}
       <Text style={styles.orderNumber}>
         N. de orden {formatOrderNumber(order.orderNumber)}
       </Text>
 
+      {/* Fecha y hora formateadas del momento de emisión */}
       <Text style={styles.date}>
         Enviada el {formatOrderDate(order.createdAt)}
       </Text>
 
+      {/* Botón de redirección hacia el panel de seguimiento de notificaciones */}
       <Pressable
         style={styles.followButton}
         onPress={() => router.replace("/notifications")}
@@ -53,6 +64,7 @@ export default function OrderConfirmedScreen() {
   );
 }
 
+// Declaración de estilos para la vista de éxito
 const styles = StyleSheet.create({
   container: {
     flex: 1,

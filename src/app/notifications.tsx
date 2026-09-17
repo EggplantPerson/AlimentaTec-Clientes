@@ -3,6 +3,7 @@ import { Stack } from "expo-router";
 import { FlatList, StyleSheet, Text, View } from "react-native";
 import { Order, OrderStatus, useOrdersStore } from "../store/orderStore";
 
+// Mapeo de colores visuales para cada estado del pedido
 const STATUS_COLORS: Record<OrderStatus, { background: string; text: string }> =
   {
     Pendiente: { background: "#fef3c7", text: "#92400e" },
@@ -11,16 +12,20 @@ const STATUS_COLORS: Record<OrderStatus, { background: string; text: string }> =
     Entregado: { background: "#e5e5e5", text: "#525252" },
   };
 
+// Función auxiliar para dar formato a la hora de creación del pedido
 function formatTime(timestamp: number): string {
   const date = new Date(timestamp);
   return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 }
 
+// Pantalla para mostrar las notificaciones e historial de pedidos del usuario
 export default function NotificationsScreen() {
+  // Obtención del historial de pedidos almacenado en la store
   const orders = useOrdersStore((state) => state.orders);
 
   return (
     <View style={styles.container}>
+      {/* Configuración de la barra de navegación superior */}
       <Stack.Screen
         options={{
           title: "Notificaciones",
@@ -30,6 +35,7 @@ export default function NotificationsScreen() {
         }}
       />
 
+      {/* Listado dinámico de pedidos */}
       <FlatList
         data={orders}
         keyExtractor={(order) => order.id}
@@ -44,6 +50,7 @@ export default function NotificationsScreen() {
           const colors = STATUS_COLORS[item.status];
           return (
             <View style={styles.card}>
+              {/* Identificador abreviado del pedido y hora de realización */}
               <View style={styles.cardHeader}>
                 <Text style={styles.orderTitle}>
                   Pedido #{item.id.slice(-4)}
@@ -53,6 +60,7 @@ export default function NotificationsScreen() {
                 </Text>
               </View>
 
+              {/* Resumen concatenado de productos incluidos */}
               <Text style={styles.itemsSummary} numberOfLines={2}>
                 {item.items
                   .map(
@@ -62,6 +70,7 @@ export default function NotificationsScreen() {
                   .join(", ")}
               </Text>
 
+              {/* Monto total e indicador dinámico de estado del pedido */}
               <View style={styles.cardFooter}>
                 <Text style={styles.orderTotal}>${item.total.toFixed(2)}</Text>
                 <View
@@ -83,6 +92,7 @@ export default function NotificationsScreen() {
   );
 }
 
+// Hojas de estilos del componente de notificaciones
 const styles = StyleSheet.create({
   container: {
     flex: 1,

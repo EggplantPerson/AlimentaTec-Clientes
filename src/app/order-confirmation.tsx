@@ -5,17 +5,22 @@ import { createOrder } from "../services/orders.service";
 import { useCartStore, useCartTotal } from "../store/cartStore";
 import { useOrdersStore } from "../store/orderStore";
 
+// Pantalla de confirmación y revisión final de la orden antes del procesamiento
 export default function OrderConfirmationScreen() {
+  // Estado del carrito y total a pagar
   const items = useCartStore((state) => state.items);
   const clearCart = useCartStore((state) => state.clearCart);
   const total = useCartTotal();
   const addOrder = useOrdersStore((state) => state.addOrder);
 
+  // Proceso asíncrono para enviar la orden al servidor y actualizar las stores
   async function handleConfirmOrder() {
     try {
+      // Generación de identificadores de prueba para el pedido
       const uid = `order-${Date.now()}`;
       const id = Math.floor(Math.random() * 1000000000);
 
+      // Aplanado del arreglo de IDs de productos de acuerdo a su cantidad
       const products: string[] = [];
 
       items.forEach((item) => {
@@ -24,6 +29,7 @@ export default function OrderConfirmationScreen() {
         }
       });
 
+      // Envío de los datos al backend
       await createOrder({
         uid,
         id,
@@ -31,10 +37,13 @@ export default function OrderConfirmationScreen() {
         total,
       });
 
+      // Registro del pedido en el estado local del historial
       const orderId = addOrder(items, total);
 
+      // Limpieza del carrito de compras tras confirmar
       clearCart();
 
+      // Navegación a la pantalla de confirmado
       router.replace(`/order-confirmed?orderId=${orderId}`);
     } catch (error) {
       console.log("Error al confirmar la orden:", error);
@@ -43,6 +52,7 @@ export default function OrderConfirmationScreen() {
 
   return (
     <View style={styles.container}>
+      {/* Configuración de cabecera en el Stack Navigator */}
       <Stack.Screen
         options={{
           title: "Confirmar orden",
@@ -52,6 +62,7 @@ export default function OrderConfirmationScreen() {
       />
 
       <View style={styles.content}>
+        {/* Encabezado visual e indicativos */}
         <Ionicons name="checkmark-circle-outline" size={64} color="#15803d" />
         <Text style={styles.title}>Confirmar tu orden</Text>
         <Text style={styles.subtitle}>
@@ -59,6 +70,7 @@ export default function OrderConfirmationScreen() {
           carrito.
         </Text>
 
+        {/* Tarjeta con el desglose completo del pedido */}
         <View style={styles.summaryBox}>
           {items.map((item) => (
             <View key={item.product.id} style={styles.summaryItemBlock}>
@@ -80,6 +92,7 @@ export default function OrderConfirmationScreen() {
 
           <View style={styles.divider} />
 
+          {/* Sumatoria total */}
           <View style={styles.summaryRow}>
             <Text style={styles.totalLabel}>Total</Text>
             <Text style={styles.totalValue}>${total.toFixed(2)}</Text>
@@ -87,6 +100,7 @@ export default function OrderConfirmationScreen() {
         </View>
       </View>
 
+      {/* Botones de acción inferiores */}
       <View style={styles.footer}>
         <Pressable style={styles.confirmButton} onPress={handleConfirmOrder}>
           <Text style={styles.confirmButtonText}>Confirmar orden</Text>
@@ -99,6 +113,7 @@ export default function OrderConfirmationScreen() {
   );
 }
 
+// Declaración de estilos para la pantalla de confirmación
 const styles = StyleSheet.create({
   container: {
     flex: 1,

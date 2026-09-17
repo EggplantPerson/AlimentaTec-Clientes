@@ -22,6 +22,7 @@ import {
   useProductsStore,
 } from "../../store/productsStore";
 
+// Diccionario que asocia el nombre de cada categoría con su respectivo icono de Ionicons
 const CATEGORY_ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
   Todos: "apps-outline",
   Disponibles: "checkmark-circle-outline",
@@ -30,9 +31,15 @@ const CATEGORY_ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
   Snack: "nutrition-outline",
 };
 
+// Pantalla principal del catálogo de productos y filtros
 export default function ProductsScreen() {
+  // Hook personalizado para desencadenar la carga inicial de datos desde la API o store
   useLoadProducts();
+
+  // Insets para respetar las zonas seguras del dispositivo (notch/barra de estado)
   const insets = useSafeAreaInsets();
+
+  // Hooks y selectores de estado para categorías, productos, carrito y notificaciones
   const categories = useCategories();
   const selectedCategory = useProductsStore((state) => state.selectedCategory);
   const setCategory = useProductsStore((state) => state.setCategory);
@@ -41,10 +48,13 @@ export default function ProductsScreen() {
   const cartCount = useCartItemCount();
   const activeOrdersCount = useActiveOrdersCount();
 
+  // Estado local para la búsqueda de productos por texto
   const [searchQuery, setSearchQuery] = useState("");
 
+  // Obtiene los productos filtrados por la categoría seleccionada
   const categoryFilteredProducts = useFilteredProducts();
 
+  // Filtra los productos localmente por coincidencia de texto en el nombre
   const filteredProducts = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
     if (!query) return categoryFilteredProducts;
@@ -55,9 +65,12 @@ export default function ProductsScreen() {
 
   return (
     <View style={styles.container}>
+      {/* Oculta el encabezado por defecto de Expo Router */}
       <Stack.Screen options={{ headerShown: false }} />
 
+      {/* Barra superior con buscador y botones de notificación/carrito */}
       <View style={[styles.topBar, { paddingTop: insets.top + 12 }]}>
+        {/* Campo de búsqueda con opción de limpiar el texto introducido */}
         <View style={styles.searchContainer}>
           <Ionicons
             name="search"
@@ -82,6 +95,7 @@ export default function ProductsScreen() {
           )}
         </View>
 
+        {/* Botón de acceso a notificaciones con contador de pedidos activos */}
         <Pressable
           style={styles.cartButton}
           onPress={() => router.push("/notifications")}
@@ -94,6 +108,7 @@ export default function ProductsScreen() {
           )}
         </Pressable>
 
+        {/* Botón de acceso al carrito con badge numérico */}
         <Pressable
           style={styles.cartButton}
           onPress={() => router.push("/cart")}
@@ -107,8 +122,10 @@ export default function ProductsScreen() {
         </Pressable>
       </View>
 
+      {/* Despliegue de mensaje de error en caso de fallo al recuperar los datos */}
       {error && <Text style={styles.errorText}>{error}</Text>}
 
+      {/* Menú de categorías con desplazamiento horizontal */}
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
@@ -140,6 +157,7 @@ export default function ProductsScreen() {
         })}
       </ScrollView>
 
+      {/* Condicional para mostrar cargando o la lista de tarjetas de productos */}
       {loading ? (
         <ActivityIndicator
           style={styles.loading}

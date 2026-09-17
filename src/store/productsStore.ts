@@ -2,6 +2,7 @@ import { useEffect, useMemo } from "react";
 import { create } from "zustand";
 import { getProducts } from "../services/product.service";
 
+// Estructura de datos para representar un producto
 export interface Product {
   id: string;
   name: string;
@@ -13,11 +14,14 @@ export interface Product {
   notes: string;
 }
 
+// Tipo de utilidad para crear o editar un producto omitiendo el id autogenerado
 export type ProductInput = Omit<Product, "id">;
 
+// Constantes para las etiquetas de los filtros del catálogo
 export const ALL_CATEGORIES_LABEL = "Todos";
 export const AVAILABLE_FILTER_LABEL = "Disponibles";
 
+// Interfaz para la definición del estado global del catálogo de productos y sus acciones
 interface ProductsState {
   products: Product[];
   categories: string[];
@@ -36,6 +40,7 @@ interface ProductsState {
   getProductById: (id: string) => Product | undefined;
 }
 
+// Store principal de Zustand para administrar el inventario y estado del catálogo
 export const useProductsStore = create<ProductsState>((set, get) => ({
   products: [],
   categories: [],
@@ -45,8 +50,10 @@ export const useProductsStore = create<ProductsState>((set, get) => ({
   saving: false,
   error: null,
 
+  // Cambia la categoría seleccionada actualmente en el filtro
   setCategory: (category) => set({ selectedCategory: category }),
 
+  // Carga asíncrona de los productos desde el servicio externo y mapea la respuesta
   loadProducts: async () => {
     set({ loading: true, error: null });
 
@@ -80,6 +87,7 @@ export const useProductsStore = create<ProductsState>((set, get) => ({
     }
   },
 
+  // Genera la lista de categorías únicas basándose en los productos cargados
   loadCategories: async () => {
     const products = get().products;
 
@@ -90,6 +98,7 @@ export const useProductsStore = create<ProductsState>((set, get) => ({
     });
   },
 
+  // Busca un producto por ID y lo establece como el producto seleccionado activo
   selectProduct: async (id) => {
     const product = get().products.find((item) => item.id === id);
 
@@ -102,6 +111,7 @@ export const useProductsStore = create<ProductsState>((set, get) => ({
     return undefined;
   },
 
+  // Crea un nuevo producto, recalcula las categorías únicas y actualiza la lista
   createProduct: async (product) => {
     set({ saving: true, error: null });
 
@@ -131,6 +141,7 @@ export const useProductsStore = create<ProductsState>((set, get) => ({
     }
   },
 
+  // Modifica un producto existente por id y actualiza el estado global
   updateProduct: async (id, product) => {
     set({ saving: true, error: null });
 
@@ -171,9 +182,11 @@ export const useProductsStore = create<ProductsState>((set, get) => ({
     }
   },
 
+  // Retorna un producto del estado local según su ID
   getProductById: (id) => get().products.find((product) => product.id === id),
 }));
 
+// Hook para obtener las categorías disponibles junto con los filtros especiales de UI
 export function useCategories(): string[] {
   const products = useProductsStore((state) => state.products);
   const categories = useProductsStore((state) => state.categories);
@@ -191,6 +204,7 @@ export function useCategories(): string[] {
   }, [categories, products]);
 }
 
+// Hook para obtener la lista de productos filtrada por categoría y ordenada por disponibilidad
 export function useFilteredProducts(): Product[] {
   const products = useProductsStore((state) => state.products);
   const selectedCategory = useProductsStore((state) => state.selectedCategory);
@@ -213,6 +227,7 @@ export function useFilteredProducts(): Product[] {
   }, [products, selectedCategory]);
 }
 
+// Hook de efecto para cargar automáticamente la lista de productos al montar el componente
 export function useLoadProducts(): void {
   const loadProducts = useProductsStore((state) => state.loadProducts);
 

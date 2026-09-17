@@ -4,7 +4,7 @@
     "slug": "Alimentatec",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/loading/logo-cafe.avif",
+    "icon": "./assets/images/loading/tenor.gif",
     "scheme": "productsapp",
     "userInterfaceStyle": "automatic",
     "android": {

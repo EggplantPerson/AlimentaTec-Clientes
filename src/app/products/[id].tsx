@@ -23,8 +23,12 @@ import {
 } from "../../store/cartStore";
 import { useProductsStore } from "../../store/productsStore";
 
+// Componente principal de la pantalla de detalle de un producto
 export default function ProductDetailScreen() {
+  // Obtiene el ID del producto enviado por los parámetros de la URL
   const { id } = useLocalSearchParams<{ id: string }>();
+
+  // Selección de datos y acciones del store global de productos
   const product = useProductsStore((state) =>
     state.products.find((p) => p.id === id),
   );
@@ -33,32 +37,45 @@ export default function ProductDetailScreen() {
   const updateProduct = useProductsStore((state) => state.updateProduct);
   const loading = useProductsStore((state) => state.loading);
   const saving = useProductsStore((state) => state.saving);
+
+  // Selección de datos y acciones del store global del carrito
   const addItem = useCartStore((state) => state.addItem);
   const cartItems = useCartStore((state) => state.items);
   const cartCount = useCartItemCount();
+
+  // Comprueba si se alcanzó el límite global de artículos en el carrito
   const reachedTotalLimit = cartCount >= MAX_TOTAL_ITEMS;
 
+  // Estados locales para la edición de notas del cliente y notificaciones visuales
   const [isEditingNote, setIsEditingNote] = useState(false);
   const [noteText, setNoteText] = useState("");
   const [showCartNotification, setShowCartNotification] = useState(false);
 
+  // Selecciona automáticamente el producto en el store cuando cambia la ruta
   useEffect(() => {
     if (id) void selectProduct(id);
   }, [id, selectProduct]);
 
+  // Determina el objeto de producto a mostrar combinando estado local y selecciones
   const displayedProduct = product ?? selectedProduct;
+
+  // Calcula las unidades actuales agregadas de este producto específico
   const currentProductQuantity =
     cartItems.find((item) => item.product.id === displayedProduct?.id)
       ?.quantity ?? 0;
+
+  // Comprueba si se alcanzó el límite de compra para este producto individual
   const reachedProductLimit =
     currentProductQuantity >= MAX_QUANTITY_PER_PRODUCT;
 
+  // Sincroniza el texto de la nota local con la información guardada del producto
   useEffect(() => {
     if (displayedProduct) {
       setNoteText(displayedProduct.notes ?? "");
     }
   }, [displayedProduct?.id]);
 
+  // Persiste la nota personalizada del usuario en el store global
   async function handleSaveNote() {
     if (!displayedProduct) return;
     try {
@@ -69,12 +86,14 @@ export default function ProductDetailScreen() {
     }
   }
 
+  // Descarta los cambios realizados en el campo de texto de la nota
   function handleCancelNote() {
     if (!displayedProduct) return;
     setNoteText(displayedProduct.notes ?? "");
     setIsEditingNote(false);
   }
 
+  // Agrega el producto al carrito y dispara un mensaje de confirmación temporal
   function handleAddToCart() {
     if (!displayedProduct) return;
 
@@ -87,12 +106,14 @@ export default function ProductDetailScreen() {
     }, 3000);
   }
 
+  // Muestra un indicador de carga mientras se recuperan los datos
   if (loading && !displayedProduct) {
     return (
       <ActivityIndicator style={styles.centered} size="large" color="#15803d" />
     );
   }
 
+  // Renderiza una vista de error si el producto no existe en el catálogo
   if (!displayedProduct) {
     return (
       <View style={styles.centered}>
@@ -105,6 +126,7 @@ export default function ProductDetailScreen() {
   }
 
   return (
+    // Evita que el teclado virtual cubra los campos de entrada en pantalla
     <KeyboardAvoidingView
       style={styles.container}
       behavior={Platform.OS === "ios" ? "padding" : "height"}
@@ -114,6 +136,7 @@ export default function ProductDetailScreen() {
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
       >
+        {/* Configuración dinámica de la barra superior de navegación */}
         <Stack.Screen
           options={{
             title: displayedProduct.name,
@@ -135,6 +158,7 @@ export default function ProductDetailScreen() {
           }}
         />
 
+        {/* Detalle visual y datos del producto */}
         <View style={styles.body}>
           <Image
             source={{ uri: displayedProduct.image }}
@@ -142,6 +166,7 @@ export default function ProductDetailScreen() {
             resizeMode="cover"
           />
           <View style={styles.headerRow}>
+            {/* Indicador visual de la disponibilidad en inventario */}
             <View
               style={[
                 styles.badge,
@@ -163,6 +188,7 @@ export default function ProductDetailScreen() {
             </View>
           </View>
 
+          {/* Sección de precio y acción de compra */}
           <View style={styles.priceRow}>
             <Text style={styles.price}>
               ${displayedProduct.price.toFixed(2)}
@@ -183,6 +209,7 @@ export default function ProductDetailScreen() {
             )}
           </View>
 
+          {/* Advertencias sobre los límites de cantidad en compras */}
           {reachedProductLimit && (
             <Text style={styles.totalLimitText}>
               Alcanzaste el máximo de {MAX_QUANTITY_PER_PRODUCT} unidades para
@@ -199,6 +226,7 @@ export default function ProductDetailScreen() {
           <Text style={styles.sectionTitle}>Descripción</Text>
           <Text style={styles.description}>{displayedProduct.description}</Text>
 
+          {/* Sección para agregar o modificar notas e instrucciones especiales */}
           {displayedProduct.available && (
             <>
               <Text style={styles.sectionTitle}>Nota</Text>
@@ -253,6 +281,8 @@ export default function ProductDetailScreen() {
               )}
             </>
           )}
+
+          {/* Alerta flotante temporal de adición exitosa al carrito */}
           {showCartNotification && (
             <View style={styles.cartNotification}>
               <Ionicons name="checkmark-circle" size={22} color="#15803d" />
@@ -267,6 +297,7 @@ export default function ProductDetailScreen() {
   );
 }
 
+// Hojas de estilo de React Native para la maquetación visual
 const styles = StyleSheet.create({
   container: {
     flex: 1,

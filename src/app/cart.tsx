@@ -14,22 +14,30 @@ import {
   useCartTotal,
 } from "../store/cartStore";
 
+// Componente para visualizar y gestionar el carrito de compras
 export default function CartScreen() {
+  // Selectores para obtener los productos y acciones del store
   const items = useCartStore((state) => state.items);
   const increaseQuantity = useCartStore((state) => state.increaseQuantity);
   const decreaseQuantity = useCartStore((state) => state.decreaseQuantity);
   const removeItem = useCartStore((state) => state.removeItem);
   const clearCart = useCartStore((state) => state.clearCart);
+
+  // Cálculo del monto total acumulado
   const total = useCartTotal();
+
+  // Conteo total de unidades agregadas para validar límites
   const totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
   const reachedTotalLimit = totalItems >= MAX_TOTAL_ITEMS;
 
+  // Redirección a la pantalla de confirmación de pedido
   const handleCreateOrder = () => {
     router.push("/order-confirmation");
   };
 
   return (
     <View style={styles.container}>
+      {/* Opciones del header navegable con Expo Router */}
       <Stack.Screen
         options={{
           title: "Carrito",
@@ -38,6 +46,7 @@ export default function CartScreen() {
         }}
       />
 
+      {/* Controles superiores cuando el carrito contiene ítems */}
       {items.length > 0 && (
         <View style={styles.topRow}>
           <Pressable style={styles.clearButton} onPress={clearCart}>
@@ -51,6 +60,7 @@ export default function CartScreen() {
         </View>
       )}
 
+      {/* Vista de estado vacío */}
       {items.length === 0 ? (
         <View style={styles.emptyContainer}>
           <Text style={styles.emptyText}>¿Quieres pedir algo? Añadelo!</Text>
@@ -59,6 +69,7 @@ export default function CartScreen() {
           </Pressable>
         </View>
       ) : (
+        /* Vista con la lista de productos agregados */
         <>
           <FlatList
             data={items}
@@ -69,11 +80,13 @@ export default function CartScreen() {
                 item.quantity >= MAX_QUANTITY_PER_PRODUCT || reachedTotalLimit;
               return (
                 <View style={styles.itemRow}>
+                  {/* Miniatura de la imagen del producto */}
                   <Image
                     source={{ uri: item.product.image }}
                     style={styles.itemImage}
                   />
 
+                  {/* Información y detalles del ítem */}
                   <View style={styles.itemInfo}>
                     <Text style={styles.itemName} numberOfLines={1}>
                       {item.product.name}
@@ -87,6 +100,7 @@ export default function CartScreen() {
                       </Text>
                     ) : null}
 
+                    {/* Controles de incremento/decremento de unidades */}
                     <View style={styles.quantityRow}>
                       <Pressable
                         style={styles.quantityButton}
@@ -113,6 +127,7 @@ export default function CartScreen() {
                         </Text>
                       </Pressable>
 
+                      {/* Botón para eliminar el producto por completo */}
                       <Pressable
                         style={styles.removeButton}
                         onPress={() => removeItem(item.product.id)}
@@ -121,6 +136,7 @@ export default function CartScreen() {
                       </Pressable>
                     </View>
 
+                    {/* Mensaje informativo en caso de tope de stock por producto */}
                     {reachedLimit && (
                       <Text style={styles.limitText}>
                         Máximo {MAX_QUANTITY_PER_PRODUCT} por producto
@@ -132,6 +148,7 @@ export default function CartScreen() {
             }}
           />
 
+          {/* Sección de resumen de pago y checkout */}
           <View style={styles.footer}>
             <View style={styles.totalRow}>
               <Text style={styles.totalLabel}>Total</Text>
