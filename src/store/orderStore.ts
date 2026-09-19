@@ -10,11 +10,22 @@ export type OrderStatus =
   | "Listo"
   | "Entregado";
 
+// Copia congelada de un producto comprado, tal como estaba al momento de la compra.
+// No depende del catálogo actual: si el producto cambia después, esta copia no se ve afectada.
+export interface OrderItem {
+  productId: string;
+  name: string;
+  price: number;
+  quantity: number;
+  image?: string;
+  notes?: string;
+}
+
 // Estructura de un pedido individual
 export interface Order {
   id: string;
   orderNumber: number;
-  items: CartItem[];
+  items: OrderItem[];
   total: number;
   status: OrderStatus;
   createdAt: number;
@@ -24,7 +35,7 @@ export interface Order {
 interface OrdersState {
   orders: Order[];
   nextOrderNumber: number;
-  addOrder: (items: CartItem[], total: number) => string;
+  addOrder: (uid: string, items: CartItem[], total: number) => string;
   updateOrderStatus: (orderId: string, status: OrderStatus) => void;
   getOrderById: (orderId: string) => Order | undefined;
 }
@@ -36,30 +47,42 @@ export const useOrdersStore = create<OrdersState>()(
       orders: [],
       nextOrderNumber: 1,
 
-      // Crea una nueva orden, le asigna folios e id, y la agrega al inicio de la lista
-      addOrder: (items, total) => {
-        const id = String(Date.now());
+      // Crea una nueva orden: convierte cada CartItem en una copia congelada (OrderItem)
+      // para que la orden no dependa del catálogo de productos en el futuro.
+      addOrder: (uid, items, total) => {
         const orderNumber = get().nextOrderNumber;
+
+        const snapshotItems: OrderItem[] = items.map((item) => ({
+          productId: item.product.id,
+          name: item.product.name,
+          price: item.product.price,
+          quantity: item.quantity,
+          image: item.product.image,
+          notes: item.product.notes,
+        }));
+
         const newOrder: Order = {
-          id,
+          id: uid, // importante: el UID enviado al backend
           orderNumber,
-          items,
+          items: snapshotItems,
           total,
           status: "Pendiente",
           createdAt: Date.now(),
         };
+
         set((state) => ({
           orders: [newOrder, ...state.orders],
           nextOrderNumber: state.nextOrderNumber + 1,
         }));
-        return id;
+
+        return uid;
       },
 
       // Actualiza el estado actual de una orden por su id
-      updateOrderStatus: (orderId, status) =>
+      updateOrderStatus: (uid: string, status: OrderStatus) =>
         set((state) => ({
           orders: state.orders.map((order) =>
-            order.id === orderId ? { ...order, status } : order,
+            order.id === uid ? { ...order, status } : order,
           ),
         })),
 

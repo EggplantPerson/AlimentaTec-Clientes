@@ -37,8 +37,9 @@ export default function OrderConfirmationScreen() {
         total,
       });
 
+      const orderId = addOrder(uid, items, total);
+
       // Registro del pedido en el estado local del historial
-      const orderId = addOrder(items, total);
 
       // Limpieza del carrito de compras tras confirmar
       clearCart();

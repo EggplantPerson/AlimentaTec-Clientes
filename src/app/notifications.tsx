@@ -64,8 +64,7 @@ export default function NotificationsScreen() {
               <Text style={styles.itemsSummary} numberOfLines={2}>
                 {item.items
                   .map(
-                    (cartItem) =>
-                      `${cartItem.quantity}x ${cartItem.product.name}`,
+                    (orderItem) => `${orderItem.quantity}x ${orderItem.name}`,
                   )
                   .join(", ")}
               </Text>
