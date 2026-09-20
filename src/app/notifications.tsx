@@ -53,7 +53,7 @@ export default function NotificationsScreen() {
               {/* Identificador abreviado del pedido y hora de realización */}
               <View style={styles.cardHeader}>
                 <Text style={styles.orderTitle}>
-                  Pedido #{item.id.slice(-4)}
+                  Pedido #{item.orderNumber}
                 </Text>
                 <Text style={styles.orderTime}>
                   {formatTime(item.createdAt)}

@@ -30,14 +30,14 @@ export default function OrderConfirmationScreen() {
       });
 
       // Envío de los datos al backend
-      await createOrder({
+      const createdOrder = await createOrder({
         uid,
         id,
         products,
         total,
       });
 
-      const orderId = addOrder(uid, items, total);
+      const orderId = addOrder(createdOrder.uid, createdOrder.id, items, total);
 
       // Registro del pedido en el estado local del historial
 

@@ -1,11 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { router, Stack, useLocalSearchParams } from "expo-router";
 import { Pressable, StyleSheet, Text, View } from "react-native";
-import {
-  formatOrderDate,
-  formatOrderNumber,
-  useOrdersStore,
-} from "../store/orderStore";
+import { formatOrderDate, useOrdersStore } from "../store/orderStore";
 
 // Pantalla de éxito tras realizar un pedido exitosamente
 export default function OrderConfirmedScreen() {
@@ -44,9 +40,7 @@ export default function OrderConfirmedScreen() {
       <Text style={styles.title}>¡Orden Confirmada!</Text>
 
       {/* Número asignado a la orden */}
-      <Text style={styles.orderNumber}>
-        N. de orden {formatOrderNumber(order.orderNumber)}
-      </Text>
+      <Text style={styles.orderNumber}>N. de orden #{order.orderNumber}</Text>
 
       {/* Fecha y hora formateadas del momento de emisión */}
       <Text style={styles.date}>

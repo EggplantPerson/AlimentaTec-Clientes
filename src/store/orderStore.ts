@@ -35,7 +35,12 @@ export interface Order {
 interface OrdersState {
   orders: Order[];
   nextOrderNumber: number;
-  addOrder: (uid: string, items: CartItem[], total: number) => string;
+  addOrder: (
+    uid: string,
+    orderNumber: number,
+    items: CartItem[],
+    total: number,
+  ) => string;
   updateOrderStatus: (orderId: string, status: OrderStatus) => void;
   getOrderById: (orderId: string) => Order | undefined;
 }
@@ -49,9 +54,7 @@ export const useOrdersStore = create<OrdersState>()(
 
       // Crea una nueva orden: convierte cada CartItem en una copia congelada (OrderItem)
       // para que la orden no dependa del catálogo de productos en el futuro.
-      addOrder: (uid, items, total) => {
-        const orderNumber = get().nextOrderNumber;
-
+      addOrder: (uid, orderNumber, items, total) => {
         const snapshotItems: OrderItem[] = items.map((item) => ({
           productId: item.product.id,
           name: item.product.name,
@@ -62,7 +65,7 @@ export const useOrdersStore = create<OrdersState>()(
         }));
 
         const newOrder: Order = {
-          id: uid, // importante: el UID enviado al backend
+          id: uid,
           orderNumber,
           items: snapshotItems,
           total,

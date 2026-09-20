@@ -38,6 +38,8 @@ interface ProductsState {
   createProduct: (product: ProductInput) => Promise<void>;
   updateProduct: (id: string, product: Partial<ProductInput>) => Promise<void>;
   getProductById: (id: string) => Product | undefined;
+  upsertProduct: (product: Product) => void;
+  removeProduct: (id: string) => void;
 }
 
 // Store principal de Zustand para administrar el inventario y estado del catálogo
@@ -184,6 +186,39 @@ export const useProductsStore = create<ProductsState>((set, get) => ({
 
   // Retorna un producto del estado local según su ID
   getProductById: (id) => get().products.find((product) => product.id === id),
+
+  // funcion para actualizar el producto
+  upsertProduct: (product) =>
+    set((state) => {
+      const exists = state.products.some((item) => item.id === product.id);
+
+      const products = exists
+        ? state.products.map((item) =>
+            item.id === product.id ? product : item,
+          )
+        : [...state.products, product];
+
+      return {
+        products,
+        categories: Array.from(new Set(products.map((item) => item.category))),
+        selectedProduct:
+          state.selectedProduct?.id === product.id
+            ? product
+            : state.selectedProduct,
+      };
+    }),
+  // funcion para eliminar el pedido
+  removeProduct: (id) =>
+    set((state) => {
+      const products = state.products.filter((item) => item.id !== id);
+
+      return {
+        products,
+        categories: Array.from(new Set(products.map((item) => item.category))),
+        selectedProduct:
+          state.selectedProduct?.id === id ? undefined : state.selectedProduct,
+      };
+    }),
 }));
 
 // Hook para obtener las categorías disponibles junto con los filtros especiales de UI
