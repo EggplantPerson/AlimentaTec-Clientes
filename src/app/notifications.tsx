@@ -1,7 +1,18 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Stack } from "expo-router";
-import { FlatList, StyleSheet, Text, View } from "react-native";
+import { useState } from "react";
+import {
+    ActivityIndicator,
+    Alert,
+    FlatList,
+    Pressable,
+    StyleSheet,
+    Text,
+    View,
+} from "react-native";
+import { deleteOrder } from "../services/orders.service";
 import { Order, OrderStatus, useOrdersStore } from "../store/orderStore";
+import { useToastStore } from "../store/toastStore";
 
 // Mapeo de colores visuales para cada estado del pedido
 const STATUS_COLORS: Record<OrderStatus, { background: string; text: string }> =
@@ -22,6 +33,42 @@ function formatTime(timestamp: number): string {
 export default function NotificationsScreen() {
   // Obtención del historial de pedidos almacenado en la store
   const orders = useOrdersStore((state) => state.orders);
+  const removeOrder = useOrdersStore((state) => state.removeOrder);
+
+  // Id del pedido que se está cancelando actualmente (para deshabilitar su botón mientras carga)
+  const [cancelingId, setCancelingId] = useState<string | null>(null);
+
+  const handleCancelPress = (order: Order) => {
+    Alert.alert(
+      "Cancelar pedido",
+      `¿Seguro que quieres cancelar el pedido ${"#" + String(order.orderNumber).padStart(8, "0")}? Esta acción no se puede deshacer.`,
+      [
+        { text: "Volver", style: "cancel" },
+        {
+          text: "Confirmar",
+          style: "destructive",
+          onPress: () => handleConfirmCancel(order),
+        },
+      ],
+    );
+  };
+
+  const handleConfirmCancel = async (order: Order) => {
+    setCancelingId(order.id);
+    try {
+      await deleteOrder(order.uid);
+      removeOrder(order.id);
+      useToastStore.getState().showToast("Pedido cancelado");
+    } catch (e) {
+      console.log("No se pudo cancelar el pedido:", e);
+      Alert.alert(
+        "No se pudo cancelar",
+        "Ocurrió un error al cancelar el pedido. Intenta de nuevo.",
+      );
+    } finally {
+      setCancelingId(null);
+    }
+  };
 
   return (
     <View style={styles.container}>
@@ -48,6 +95,9 @@ export default function NotificationsScreen() {
         }
         renderItem={({ item }: { item: Order }) => {
           const colors = STATUS_COLORS[item.status];
+          const canCancel = item.status === "Pendiente";
+          const isCanceling = cancelingId === item.id;
+
           return (
             <View style={styles.card}>
               {/* Identificador abreviado del pedido y hora de realización */}
@@ -83,6 +133,24 @@ export default function NotificationsScreen() {
                   </Text>
                 </View>
               </View>
+
+              {/* Botón de cancelar: solo visible mientras el pedido está en espera */}
+              {canCancel && (
+                <Pressable
+                  style={[
+                    styles.cancelButton,
+                    isCanceling && styles.cancelButtonDisabled,
+                  ]}
+                  onPress={() => handleCancelPress(item)}
+                  disabled={isCanceling}
+                >
+                  {isCanceling ? (
+                    <ActivityIndicator color="#b91c1c" size="small" />
+                  ) : (
+                    <Text style={styles.cancelButtonText}>Cancelar pedido</Text>
+                  )}
+                </Pressable>
+              )}
             </View>
           );
         }}
@@ -154,5 +222,23 @@ const styles = StyleSheet.create({
   statusText: {
     fontSize: 12,
     fontWeight: "700",
+  },
+  cancelButton: {
+    marginTop: 10,
+    height: 40,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "#fecaca",
+    backgroundColor: "#fef2f2",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  cancelButtonDisabled: {
+    opacity: 0.6,
+  },
+  cancelButtonText: {
+    color: "#b91c1c",
+    fontWeight: "700",
+    fontSize: 13,
   },
 });

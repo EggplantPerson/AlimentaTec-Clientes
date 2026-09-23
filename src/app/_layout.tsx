@@ -2,14 +2,17 @@ import { Stack } from "expo-router";
 import { useEffect } from "react";
 import { View } from "react-native";
 import GlobalToast from "../components/GlobalToast";
+import StoreClosedOverlay from "../components/StoreClosedOverlay";
 import { socket } from "../services/socket";
+import { useDeviceStore } from "../store/deviceStore";
 import {
   formatOrderNumber,
   OrderStatus,
   useOrdersStore,
 } from "../store/orderStore";
 import { Product, useProductsStore } from "../store/productsStore";
-import { useToastStore } from "../store/toastStore";
+import { useStoreStateStore } from "../store/storeStateStore";
+import { useToastStore } from "../store/toastStore"; // revisar si lo voy a usar
 
 const STATUS_FROM_API: Record<string, OrderStatus> = {
   "En espera": "Pendiente",
@@ -19,9 +22,17 @@ const STATUS_FROM_API: Record<string, OrderStatus> = {
 };
 
 function useOrderSocket() {
+  // Inicialización única: id del dispositivo y estado inicial de la tienda
+  useEffect(() => {
+    const id = useDeviceStore.getState().ensureDeviceId();
+    console.log(" Device ID actual:", id);
+    useStoreStateStore.getState().loadStoreState();
+  }, []);
+
   useEffect(() => {
     const handleConnect = () => {
       console.log(" Socket conectado:", socket.id);
+      useStoreStateStore.getState().loadStoreState();
     };
 
     const handleConnectError = (error: Error & { description?: unknown }) => {
@@ -44,9 +55,11 @@ function useOrderSocket() {
       }
 
       const previousOrders = useOrdersStore.getState().orders;
-      const matchedOrder = previousOrders.find(
-        (localOrder) => localOrder.id === order.uid,
-      );
+      const ordersOfDevice = previousOrders
+        .filter((localOrder) => localOrder.uid === order.uid)
+        .sort((a, b) => b.createdAt - a.createdAt);
+
+      const matchedOrder = ordersOfDevice[0];
 
       if (!matchedOrder) {
         console.log("Pedido no encontrado localmente:", order.uid);
@@ -63,6 +76,18 @@ function useOrderSocket() {
       }
 
       useOrdersStore.getState().updateOrderStatus(order.uid, status);
+    };
+
+    const handleStoreUpdated = (payload: {
+      isOpen?: boolean;
+      open?: boolean;
+      status?: string;
+    }) => {
+      // Normalizamos porque el backend puede mandar isOpen, open o status según el evento
+      const raw = payload.isOpen ?? payload.open;
+      if (typeof raw === "boolean") {
+        useStoreStateStore.getState().setOpen(raw);
+      }
     };
 
     const mapApiProduct = (product: {
@@ -100,6 +125,16 @@ function useOrderSocket() {
       useProductsStore.getState().removeProduct(String(product.id));
     };
 
+    const handleOrderDeleted = (order: { uid: string }) => {
+      const previousOrders = useOrdersStore.getState().orders;
+      const matchedOrder = previousOrders.find(
+        (localOrder) => localOrder.uid === order.uid,
+      );
+      if (matchedOrder) {
+        useOrdersStore.getState().removeOrder(matchedOrder.id);
+      }
+    };
+
     socket.on("connect", handleConnect);
     socket.on("connect_error", handleConnectError);
     socket.on("disconnect", handleDisconnect);
@@ -107,6 +142,8 @@ function useOrderSocket() {
     socket.on("product:created", handleProductCreated);
     socket.on("product:updated", handleProductUpdated);
     socket.on("product:deleted", handleProductDeleted);
+    socket.on("storeState: updated", handleStoreUpdated);
+    socket.on("order:deleted", handleOrderDeleted);
     socket.connect();
 
     return () => {
@@ -117,6 +154,8 @@ function useOrderSocket() {
       socket.off("product:created", handleProductCreated);
       socket.off("product:updated", handleProductUpdated);
       socket.off("product:deleted", handleProductDeleted);
+      socket.off("storeState: updated", handleStoreUpdated);
+      socket.off("order:deleted", handleOrderDeleted);
       socket.disconnect();
     };
   }, []);
@@ -143,6 +182,7 @@ export default function RootLayout() {
           options={{ title: "Notificaciones" }}
         />
       </Stack>
+      <StoreClosedOverlay />
       <GlobalToast />
     </View>
   );

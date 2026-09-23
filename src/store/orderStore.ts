@@ -1,6 +1,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
+import { useShallow } from "zustand/react/shallow";
 import { CartItem } from "./cartStore";
 
 // Posibles estados del pedido en el flujo de trabajo
@@ -23,7 +24,8 @@ export interface OrderItem {
 
 // Estructura de un pedido individual
 export interface Order {
-  id: string;
+  id: string; // identificador único de ESTE pedido (no del dispositivo)
+  uid: string; // identificador del dispositivo que hizo el pedido (para consultar el backend)
   orderNumber: number;
   items: OrderItem[];
   total: number;
@@ -42,7 +44,9 @@ interface OrdersState {
     total: number,
   ) => string;
   updateOrderStatus: (orderId: string, status: OrderStatus) => void;
+  removeOrder: (orderId: string) => void;
   getOrderById: (orderId: string) => Order | undefined;
+  clearOrders: () => void;
 }
 
 // Store principal de Zustand para la gestión de pedidos
@@ -52,8 +56,7 @@ export const useOrdersStore = create<OrdersState>()(
       orders: [],
       nextOrderNumber: 1,
 
-      // Crea una nueva orden: convierte cada CartItem en una copia congelada (OrderItem)
-      // para que la orden no dependa del catálogo de productos en el futuro.
+      // Crea SIEMPRE una nueva orden en el historial local, aunque venga del mismo dispositivo.
       addOrder: (uid, orderNumber, items, total) => {
         const snapshotItems: OrderItem[] = items.map((item) => ({
           productId: item.product.id,
@@ -64,8 +67,11 @@ export const useOrdersStore = create<OrdersState>()(
           notes: item.product.notes,
         }));
 
+        const localOrderId = `${uid}-${Date.now()}`;
+
         const newOrder: Order = {
-          id: uid,
+          id: localOrderId,
+          uid,
           orderNumber,
           items: snapshotItems,
           total,
@@ -78,20 +84,45 @@ export const useOrdersStore = create<OrdersState>()(
           nextOrderNumber: state.nextOrderNumber + 1,
         }));
 
-        return uid;
+        return localOrderId;
       },
 
-      // Actualiza el estado actual de una orden por su id
+      // Actualiza el estado actual de una orden por el uid del dispositivo.
+      // Si el nuevo estado es "Entregado", la orden se elimina del historial en vez de solo actualizarse.
       updateOrderStatus: (uid: string, status: OrderStatus) =>
+        set((state) => {
+          const ordersOfDevice = state.orders
+            .filter((order) => order.uid === uid)
+            .sort((a, b) => b.createdAt - a.createdAt);
+
+          const mostRecentId = ordersOfDevice[0]?.id;
+
+          if (!mostRecentId) return state;
+
+          if (status === "Entregado") {
+            return {
+              orders: state.orders.filter((order) => order.id !== mostRecentId),
+            };
+          }
+
+          return {
+            orders: state.orders.map((order) =>
+              order.id === mostRecentId ? { ...order, status } : order,
+            ),
+          };
+        }),
+
+      removeOrder: (orderId: string) =>
         set((state) => ({
-          orders: state.orders.map((order) =>
-            order.id === uid ? { ...order, status } : order,
-          ),
+          orders: state.orders.filter((order) => order.id !== orderId),
         })),
 
-      // Busca y retorna un pedido específico mediante su id
+      // Busca y retorna un pedido específico mediante su id local
       getOrderById: (orderId) =>
         get().orders.find((order) => order.id === orderId),
+
+      // Vacía por completo el historial de pedidos guardado localmente
+      clearOrders: () => set({ orders: [] }),
     }),
     {
       name: "orders-storage",
@@ -105,6 +136,24 @@ export function useActiveOrdersCount(): number {
   return useOrdersStore(
     (state) =>
       state.orders.filter((order) => order.status !== "Entregado").length,
+  );
+}
+
+// Hook para saber si el usuario puede hacer un nuevo pedido (no debe tener ninguno pendiente de entrega)
+export function useCanPlaceOrder(): {
+  canOrder: boolean;
+  pendingOrder?: Order;
+} {
+  return useOrdersStore(
+    useShallow((state) => {
+      const pendingOrder = state.orders.find(
+        (order) => order.status !== "Entregado",
+      );
+      return {
+        canOrder: !pendingOrder,
+        pendingOrder,
+      };
+    }),
   );
 }
 

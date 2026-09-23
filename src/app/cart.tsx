@@ -13,6 +13,7 @@ import {
   useCartStore,
   useCartTotal,
 } from "../store/cartStore";
+import { useCanPlaceOrder } from "../store/orderStore"; // lo quito de momento
 
 // Componente para visualizar y gestionar el carrito de compras
 export default function CartScreen() {
@@ -30,10 +31,7 @@ export default function CartScreen() {
   const totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
   const reachedTotalLimit = totalItems >= MAX_TOTAL_ITEMS;
 
-  // Redirección a la pantalla de confirmación de pedido
-  const handleCreateOrder = () => {
-    router.push("/order-confirmation");
-  };
+  const { canOrder, pendingOrder } = useCanPlaceOrder();
 
   return (
     <View style={styles.container}>
@@ -155,8 +153,17 @@ export default function CartScreen() {
               <Text style={styles.totalValue}>${total.toFixed(2)}</Text>
             </View>
 
-            <Pressable style={styles.orderButton} onPress={handleCreateOrder}>
-              <Text style={styles.orderButtonText}>Ordenar ahora</Text>
+            <Pressable
+              style={[
+                styles.orderButton,
+                !canOrder && styles.orderButtonDisabled,
+              ]}
+              onPress={() => router.push("/order-confirmation")}
+              disabled={!canOrder}
+            >
+              <Text style={styles.orderButtonText}>
+                {canOrder ? "Ordenar ahora" : "Ya tienes un pedido en curso"}
+              </Text>
             </Pressable>
           </View>
         </>
@@ -315,10 +322,19 @@ const styles = StyleSheet.create({
     padding: 14,
     marginBottom: 8,
   },
+  orderButtonDisabled: {
+    backgroundColor: "#a7c4b3",
+  },
   orderButtonText: {
     color: "#fff",
     fontWeight: "700",
     fontSize: 15,
+  },
+  cooldownText: {
+    fontSize: 12,
+    color: "#b91c1c",
+    textAlign: "center",
+    marginTop: 8,
   },
   clearButton: {
     alignSelf: "flex-start",

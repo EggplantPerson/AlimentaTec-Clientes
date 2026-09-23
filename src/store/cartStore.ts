@@ -26,6 +26,7 @@ interface CartState {
   increaseQuantity: (productId: string) => void;
   decreaseQuantity: (productId: string) => void;
   clearCart: () => void;
+  removeUnavailableItems: (currentProducts: Product[]) => void;
 }
 
 // Store principal de Zustand para la gestión del carrito de compras
@@ -89,6 +90,17 @@ export const useCartStore = create<CartState>()(
 
       // Vacía todos los elementos del carrito
       clearCart: () => set({ items: [] }),
+
+      // Elimina del carrito cualquier producto que ya no exista o ya no esté disponible
+      removeUnavailableItems: (currentProducts) =>
+        set((state) => ({
+          items: state.items.filter((item) => {
+            const currentProduct = currentProducts.find(
+              (p) => p.id === item.product.id,
+            );
+            return currentProduct !== undefined && currentProduct.available;
+          }),
+        })),
     }),
     {
       name: "cart-storage",

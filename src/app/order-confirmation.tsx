@@ -1,9 +1,10 @@
 import { Ionicons } from "@expo/vector-icons";
 import { router, Stack } from "expo-router";
+import { useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
-import { createOrder } from "../services/orders.service";
+import { submitOrder } from "../services/orders.service";
 import { useCartStore, useCartTotal } from "../store/cartStore";
-import { useOrdersStore } from "../store/orderStore";
+import { useCanPlaceOrder, useOrdersStore } from "../store/orderStore";
 
 // Pantalla de confirmación y revisión final de la orden antes del procesamiento
 export default function OrderConfirmationScreen() {
@@ -12,15 +13,18 @@ export default function OrderConfirmationScreen() {
   const clearCart = useCartStore((state) => state.clearCart);
   const total = useCartTotal();
   const addOrder = useOrdersStore((state) => state.addOrder);
+  const { canOrder, pendingOrder } = useCanPlaceOrder();
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Proceso asíncrono para enviar la orden al servidor y actualizar las stores
   async function handleConfirmOrder() {
+    if (!canOrder || isSubmitting) return;
+
+    setIsSubmitting(true);
+
     try {
-      // Generación de identificadores de prueba para el pedido
-      const uid = `order-${Date.now()}`;
       const id = Math.floor(Math.random() * 1000000000);
 
-      // Aplanado del arreglo de IDs de productos de acuerdo a su cantidad
       const products: string[] = [];
 
       items.forEach((item) => {
@@ -29,25 +33,19 @@ export default function OrderConfirmationScreen() {
         }
       });
 
-      // Envío de los datos al backend
-      const createdOrder = await createOrder({
-        uid,
+      const createdOrder = await submitOrder({
         id,
         products,
         total,
       });
-
       const orderId = addOrder(createdOrder.uid, createdOrder.id, items, total);
 
-      // Registro del pedido en el estado local del historial
-
-      // Limpieza del carrito de compras tras confirmar
       clearCart();
 
-      // Navegación a la pantalla de confirmado
       router.replace(`/order-confirmed?orderId=${orderId}`);
     } catch (error) {
       console.log("Error al confirmar la orden:", error);
+      setIsSubmitting(false);
     }
   }
 
@@ -103,9 +101,30 @@ export default function OrderConfirmationScreen() {
 
       {/* Botones de acción inferiores */}
       <View style={styles.footer}>
-        <Pressable style={styles.confirmButton} onPress={handleConfirmOrder}>
-          <Text style={styles.confirmButtonText}>Confirmar orden</Text>
+        <Pressable
+          style={[
+            styles.confirmButton,
+            (!canOrder || isSubmitting) && styles.confirmButtonDisabled,
+          ]}
+          onPress={handleConfirmOrder}
+          disabled={!canOrder || isSubmitting}
+        >
+          <Text style={styles.confirmButtonText}>
+            {isSubmitting
+              ? "Enviando..."
+              : canOrder
+                ? "Confirmar orden"
+                : "Ya tienes un pedido en curso"}
+          </Text>
         </Pressable>
+
+        {!canOrder && pendingOrder && (
+          <Text style={styles.cooldownText}>
+            No puedes hacer más pedidos hasta que se entregue tu pedido actual
+            (estado: {pendingOrder.status}).
+          </Text>
+        )}
+
         <Pressable style={styles.backButton} onPress={() => router.back()}>
           <Text style={styles.backButtonText}>Volver al carrito</Text>
         </Pressable>
@@ -195,10 +214,19 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     padding: 14,
   },
+  confirmButtonDisabled: {
+    backgroundColor: "#a7c4b3",
+  },
   confirmButtonText: {
     color: "#fff",
     fontWeight: "700",
     fontSize: 15,
+  },
+  cooldownText: {
+    fontSize: 12,
+    color: "#b91c1c",
+    textAlign: "center",
+    marginTop: 8,
   },
   backButton: {
     alignItems: "center",
