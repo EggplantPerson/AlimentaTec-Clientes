@@ -3,7 +3,6 @@ import { router, Stack, useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   Image,
   KeyboardAvoidingView,
   Platform,
@@ -11,7 +10,6 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   View,
 } from "react-native";
 
@@ -34,9 +32,7 @@ export default function ProductDetailScreen() {
   );
   const selectedProduct = useProductsStore((state) => state.selectedProduct);
   const selectProduct = useProductsStore((state) => state.selectProduct);
-  const updateProduct = useProductsStore((state) => state.updateProduct);
   const loading = useProductsStore((state) => state.loading);
-  const saving = useProductsStore((state) => state.saving);
 
   // Selección de datos y acciones del store global del carrito
   const addItem = useCartStore((state) => state.addItem);
@@ -46,9 +42,7 @@ export default function ProductDetailScreen() {
   // Comprueba si se alcanzó el límite global de artículos en el carrito
   const reachedTotalLimit = cartCount >= MAX_TOTAL_ITEMS;
 
-  // Estados locales para la edición de notas del cliente y notificaciones visuales
-  const [isEditingNote, setIsEditingNote] = useState(false);
-  const [noteText, setNoteText] = useState("");
+  // Estado local para la notificación visual temporal
   const [showCartNotification, setShowCartNotification] = useState(false);
 
   // Selecciona automáticamente el producto en el store cuando cambia la ruta
@@ -67,31 +61,6 @@ export default function ProductDetailScreen() {
   // Comprueba si se alcanzó el límite de compra para este producto individual
   const reachedProductLimit =
     currentProductQuantity >= MAX_QUANTITY_PER_PRODUCT;
-
-  // Sincroniza el texto de la nota local con la información guardada del producto
-  useEffect(() => {
-    if (displayedProduct) {
-      setNoteText(displayedProduct.notes ?? "");
-    }
-  }, [displayedProduct?.id]);
-
-  // Persiste la nota personalizada del usuario en el store global
-  async function handleSaveNote() {
-    if (!displayedProduct) return;
-    try {
-      await updateProduct(displayedProduct.id, { notes: noteText.trim() });
-      setIsEditingNote(false);
-    } catch {
-      Alert.alert("Error", "No se pudo guardar la nota.");
-    }
-  }
-
-  // Descarta los cambios realizados en el campo de texto de la nota
-  function handleCancelNote() {
-    if (!displayedProduct) return;
-    setNoteText(displayedProduct.notes ?? "");
-    setIsEditingNote(false);
-  }
 
   // Agrega el producto al carrito y dispara un mensaje de confirmación temporal
   function handleAddToCart() {
@@ -225,62 +194,6 @@ export default function ProductDetailScreen() {
 
           <Text style={styles.sectionTitle}>Descripción</Text>
           <Text style={styles.description}>{displayedProduct.description}</Text>
-
-          {/* Sección para agregar o modificar notas e instrucciones especiales */}
-          {displayedProduct.available && (
-            <>
-              <Text style={styles.sectionTitle}>Nota</Text>
-
-              {isEditingNote ? (
-                <View>
-                  <TextInput
-                    value={noteText}
-                    onChangeText={setNoteText}
-                    style={[styles.input, styles.multiline]}
-                    placeholder="Ej. Sin lechuga, sin cebolla..."
-                    placeholderTextColor="#6b9c80"
-                    multiline
-                    autoFocus
-                    maxLength={50}
-                  />
-                  <View style={styles.noteButtonsRow}>
-                    <Pressable
-                      style={[styles.noteButton, styles.cancelButton]}
-                      onPress={handleCancelNote}
-                      disabled={saving}
-                    >
-                      <Text style={styles.cancelButtonText}>Cancelar</Text>
-                    </Pressable>
-                    <Pressable
-                      style={[styles.noteButton, styles.saveButton]}
-                      onPress={handleSaveNote}
-                      disabled={saving}
-                    >
-                      <Text style={styles.saveButtonText}>
-                        {saving ? "Guardando..." : "Guardar nota"}
-                      </Text>
-                    </Pressable>
-                  </View>
-                </View>
-              ) : (
-                <View style={styles.noteContainer}>
-                  <Text style={styles.noteText}>
-                    {displayedProduct.notes
-                      ? displayedProduct.notes
-                      : "Sin notas para este producto."}
-                  </Text>
-                  <Pressable
-                    style={styles.editNoteButton}
-                    onPress={() => setIsEditingNote(true)}
-                  >
-                    <Text style={styles.editNoteButtonText}>
-                      {displayedProduct.notes ? "Editar nota" : "Agregar nota"}
-                    </Text>
-                  </Pressable>
-                </View>
-              )}
-            </>
-          )}
 
           {/* Alerta flotante temporal de adición exitosa al carrito */}
           {showCartNotification && (
@@ -437,72 +350,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#555",
     lineHeight: 20,
-  },
-  noteContainer: {
-    backgroundColor: "#f0fdf4",
-    borderRadius: 12,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: "#bbf7d0",
-    marginTop: 4,
-  },
-  noteText: {
-    fontSize: 14,
-    color: "#166534",
-    lineHeight: 20,
-    fontStyle: "italic",
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: "#bbf7d0",
-    borderRadius: 8,
-    backgroundColor: "#f0fdf4",
-    padding: 12,
-    fontSize: 14,
-    marginTop: 8,
-    color: "#14532d",
-  },
-  multiline: {
-    minHeight: 70,
-    textAlignVertical: "top",
-  },
-  noteButtonsRow: {
-    flexDirection: "row",
-    gap: 10,
-    marginTop: 10,
-  },
-  noteButton: {
-    flex: 1,
-    alignItems: "center",
-    borderRadius: 8,
-    padding: 12,
-  },
-  saveButton: {
-    backgroundColor: "#15803d",
-  },
-  saveButtonText: {
-    color: "#fff",
-    fontWeight: "700",
-  },
-  cancelButton: {
-    backgroundColor: "#dcfce7",
-  },
-  cancelButtonText: {
-    color: "#166534",
-    fontWeight: "700",
-  },
-  editNoteButton: {
-    alignSelf: "flex-start",
-    marginTop: 10,
-    paddingVertical: 8,
-    paddingHorizontal: 14,
-    borderRadius: 8,
-    backgroundColor: "#15803d",
-  },
-  editNoteButtonText: {
-    color: "#fff",
-    fontWeight: "700",
-    fontSize: 13,
   },
   cartNotification: {
     position: "absolute",

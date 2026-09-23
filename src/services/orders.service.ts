@@ -25,6 +25,8 @@ async function createOrder(data: {
   id: number;
   products: string[];
   total: number;
+  notes?: string;
+  orderTime: Date;
 }) {
   const res = await fetch(API_URL, {
     method: "POST",
@@ -46,13 +48,14 @@ async function createOrder(data: {
 }
 
 // Actualiza la orden existente de este dispositivo con los nuevos productos
-async function updateOrder(
+export async function updateOrder(
   uid: string,
   data: Partial<{
     products: string[];
     total: number;
     status: string;
-    notes: string;
+    notes: string | null;
+    orderTime: Date;
   }>,
 ) {
   const res = await fetch(`${API_URL}/${uid}`, {
@@ -80,6 +83,7 @@ export async function submitOrder(data: {
   id: number;
   products: string[];
   total: number;
+  notes?: string;
 }) {
   const uid = useDeviceStore.getState().ensureDeviceId();
 
@@ -90,27 +94,17 @@ export async function submitOrder(data: {
       products: data.products,
       total: data.total,
       status: "En espera",
+      notes: data.notes,
+      orderTime: new Date(),
     });
   }
 
-  return createOrder({ ...data, uid });
-}
-
-export async function deleteOrder(uid: string) {
-  const res = await fetch(`${API_URL}/${uid}`, {
-    method: "DELETE",
+  return createOrder({
+    uid: uid,
+    id: data.id,
+    products: data.products,
+    total: data.total,
+    notes: data.notes,
+    orderTime: new Date(),
   });
-
-  // El backend responde 204 sin body cuando el borrado es exitoso
-  if (res.status === 204) {
-    return true;
-  }
-
-  const responseText = await res.text();
-
-  if (!res.ok) {
-    throw new Error(responseText || "Failed to delete order");
-  }
-
-  return true;
 }

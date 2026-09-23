@@ -11,6 +11,7 @@ export default function OrderConfirmationScreen() {
   // Estado del carrito y total a pagar
   const items = useCartStore((state) => state.items);
   const clearCart = useCartStore((state) => state.clearCart);
+  const orderNote = useCartStore((state) => state.orderNote);
   const total = useCartTotal();
   const addOrder = useOrdersStore((state) => state.addOrder);
   const { canOrder, pendingOrder } = useCanPlaceOrder();
@@ -37,8 +38,16 @@ export default function OrderConfirmationScreen() {
         id,
         products,
         total,
+        notes: orderNote.trim() || undefined,
       });
-      const orderId = addOrder(createdOrder.uid, createdOrder.id, items, total);
+
+      const orderId = addOrder(
+        createdOrder.uid,
+        createdOrder.id,
+        items,
+        total,
+        orderNote.trim(),
+      );
 
       clearCart();
 
@@ -81,11 +90,6 @@ export default function OrderConfirmationScreen() {
                   ${(item.product.price * item.quantity).toFixed(2)}
                 </Text>
               </View>
-              {item.product.notes ? (
-                <Text style={styles.summaryItemNote}>
-                  Nota: {item.product.notes}
-                </Text>
-              ) : null}
             </View>
           ))}
 
@@ -96,6 +100,14 @@ export default function OrderConfirmationScreen() {
             <Text style={styles.totalLabel}>Total</Text>
             <Text style={styles.totalValue}>${total.toFixed(2)}</Text>
           </View>
+
+          {orderNote.trim() ? (
+            <>
+              <View style={styles.divider} />
+              <Text style={styles.noteLabel}>Nota del pedido</Text>
+              <Text style={styles.noteText}>{orderNote}</Text>
+            </>
+          ) : null}
         </View>
       </View>
 
@@ -172,11 +184,6 @@ const styles = StyleSheet.create({
   summaryItemBlock: {
     marginBottom: 8,
   },
-  summaryItemNote: {
-    fontSize: 12,
-    color: "#4d7c62",
-    fontStyle: "italic",
-  },
   summaryItemName: {
     fontSize: 14,
     color: "#14532d",
@@ -200,6 +207,17 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "700",
     color: "#15803d",
+  },
+  noteLabel: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#14532d",
+    marginBottom: 4,
+  },
+  noteText: {
+    fontSize: 13,
+    color: "#4d7c62",
+    fontStyle: "italic",
   },
   footer: {
     padding: 16,

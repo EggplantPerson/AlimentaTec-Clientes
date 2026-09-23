@@ -19,6 +19,7 @@ const STATUS_FROM_API: Record<string, OrderStatus> = {
   "En preparacion": "En preparación",
   Completado: "Listo",
   Entregado: "Entregado",
+  Cancelado: "Cancelado",
 };
 
 function useOrderSocket() {
@@ -44,7 +45,11 @@ function useOrderSocket() {
       console.log(" Socket desconectado:", reason);
     };
 
-    const handleOrderUpdated = (order: { uid: string; status: string }) => {
+    const handleOrderUpdated = (order: {
+      uid: string;
+      status: string;
+      notes?: string | null;
+    }) => {
       console.log(" Evento recibido:", order);
 
       const status = STATUS_FROM_API[order.status];
@@ -63,6 +68,20 @@ function useOrderSocket() {
 
       if (!matchedOrder) {
         console.log("Pedido no encontrado localmente:", order.uid);
+        return;
+      }
+
+      // Pedido cancelado (desde el admin, con motivo, o desde la app): notificamos y
+      // lo quitamos del historial local para liberar el límite de "un pedido a la vez"
+      if (status === "Cancelado") {
+        useToastStore
+          .getState()
+          .showToast(
+            `Pedido ${formatOrderNumber(matchedOrder.orderNumber)} cancelado${
+              order.notes ? `: ${order.notes}` : ""
+            }`,
+          );
+        useOrdersStore.getState().removeOrder(matchedOrder.id);
         return;
       }
 

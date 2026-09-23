@@ -5,6 +5,7 @@ import {
   Pressable,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from "react-native";
 import {
@@ -13,7 +14,7 @@ import {
   useCartStore,
   useCartTotal,
 } from "../store/cartStore";
-import { useCanPlaceOrder } from "../store/orderStore"; // lo quito de momento
+import { useCanPlaceOrder } from "../store/orderStore";
 
 // Componente para visualizar y gestionar el carrito de compras
 export default function CartScreen() {
@@ -23,6 +24,8 @@ export default function CartScreen() {
   const decreaseQuantity = useCartStore((state) => state.decreaseQuantity);
   const removeItem = useCartStore((state) => state.removeItem);
   const clearCart = useCartStore((state) => state.clearCart);
+  const orderNote = useCartStore((state) => state.orderNote);
+  const setOrderNote = useCartStore((state) => state.setOrderNote);
 
   // Cálculo del monto total acumulado
   const total = useCartTotal();
@@ -92,11 +95,6 @@ export default function CartScreen() {
                     <Text style={styles.itemPrice}>
                       ${item.product.price.toFixed(2)}
                     </Text>
-                    {item.product.notes ? (
-                      <Text style={styles.itemNote}>
-                        Nota: {item.product.notes}
-                      </Text>
-                    ) : null}
 
                     {/* Controles de incremento/decremento de unidades */}
                     <View style={styles.quantityRow}>
@@ -148,6 +146,18 @@ export default function CartScreen() {
 
           {/* Sección de resumen de pago y checkout */}
           <View style={styles.footer}>
+            {/* Nota general para toda la orden */}
+            <Text style={styles.noteLabel}>Nota para tu pedido (opcional)</Text>
+            <TextInput
+              value={orderNote}
+              onChangeText={setOrderNote}
+              style={styles.noteInput}
+              placeholder="Ej. Sin popote, servilletas extra..."
+              placeholderTextColor="#a7c4b3"
+              multiline
+              maxLength={100}
+            />
+
             <View style={styles.totalRow}>
               <Text style={styles.totalLabel}>Total</Text>
               <Text style={styles.totalValue}>${total.toFixed(2)}</Text>
@@ -241,12 +251,6 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     marginTop: 2,
   },
-  itemNote: {
-    fontSize: 12,
-    color: "#4d7c62",
-    fontStyle: "italic",
-    marginTop: 2,
-  },
   quantityRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -299,6 +303,24 @@ const styles = StyleSheet.create({
     backgroundColor: "#f0fdf4",
     borderTopWidth: 1,
     borderTopColor: "#f0fdf4",
+  },
+  noteLabel: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#14532d",
+    marginBottom: 6,
+  },
+  noteInput: {
+    borderWidth: 1,
+    borderColor: "#bbf7d0",
+    borderRadius: 10,
+    backgroundColor: "#ffffff",
+    padding: 12,
+    fontSize: 14,
+    color: "#14532d",
+    minHeight: 50,
+    textAlignVertical: "top",
+    marginBottom: 14,
   },
   totalRow: {
     flexDirection: "row",

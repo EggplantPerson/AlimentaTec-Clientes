@@ -21,12 +21,14 @@ function getTotalQuantity(items: CartItem[]): number {
 // Interfaz para la definición del estado del carrito y sus acciones
 interface CartState {
   items: CartItem[];
+  orderNote: string;
   addItem: (product: Product) => void;
   removeItem: (productId: string) => void;
   increaseQuantity: (productId: string) => void;
   decreaseQuantity: (productId: string) => void;
   clearCart: () => void;
   removeUnavailableItems: (currentProducts: Product[]) => void;
+  setOrderNote: (note: string) => void;
 }
 
 // Store principal de Zustand para la gestión del carrito de compras
@@ -34,6 +36,7 @@ export const useCartStore = create<CartState>()(
   persist<CartState>(
     (set) => ({
       items: [],
+      orderNote: "",
 
       // Agrega un producto al carrito respetando los límites de stock por producto y total
       addItem: (product) =>
@@ -88,8 +91,8 @@ export const useCartStore = create<CartState>()(
             .filter((item) => item.quantity > 0),
         })),
 
-      // Vacía todos los elementos del carrito
-      clearCart: () => set({ items: [] }),
+      // Vacía todos los elementos del carrito y su nota
+      clearCart: () => set({ items: [], orderNote: "" }),
 
       // Elimina del carrito cualquier producto que ya no exista o ya no esté disponible
       removeUnavailableItems: (currentProducts) =>
@@ -101,6 +104,9 @@ export const useCartStore = create<CartState>()(
             return currentProduct !== undefined && currentProduct.available;
           }),
         })),
+
+      // Guarda la nota general aplicable a toda la orden
+      setOrderNote: (note) => set({ orderNote: note }),
     }),
     {
       name: "cart-storage",

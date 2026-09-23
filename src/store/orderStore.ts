@@ -9,7 +9,8 @@ export type OrderStatus =
   | "Pendiente"
   | "En preparación"
   | "Listo"
-  | "Entregado";
+  | "Entregado"
+  | "Cancelado";
 
 // Copia congelada de un producto comprado, tal como estaba al momento de la compra.
 // No depende del catálogo actual: si el producto cambia después, esta copia no se ve afectada.
@@ -19,7 +20,6 @@ export interface OrderItem {
   price: number;
   quantity: number;
   image?: string;
-  notes?: string;
 }
 
 // Estructura de un pedido individual
@@ -30,6 +30,7 @@ export interface Order {
   items: OrderItem[];
   total: number;
   status: OrderStatus;
+  notes?: string; // nota general aplicable a toda la orden
   createdAt: number;
 }
 
@@ -42,6 +43,7 @@ interface OrdersState {
     orderNumber: number,
     items: CartItem[],
     total: number,
+    notes?: string,
   ) => string;
   updateOrderStatus: (orderId: string, status: OrderStatus) => void;
   removeOrder: (orderId: string) => void;
@@ -57,14 +59,13 @@ export const useOrdersStore = create<OrdersState>()(
       nextOrderNumber: 1,
 
       // Crea SIEMPRE una nueva orden en el historial local, aunque venga del mismo dispositivo.
-      addOrder: (uid, orderNumber, items, total) => {
+      addOrder: (uid, orderNumber, items, total, notes) => {
         const snapshotItems: OrderItem[] = items.map((item) => ({
           productId: item.product.id,
           name: item.product.name,
           price: item.product.price,
           quantity: item.quantity,
           image: item.product.image,
-          notes: item.product.notes,
         }));
 
         const localOrderId = `${uid}-${Date.now()}`;
@@ -76,6 +77,7 @@ export const useOrdersStore = create<OrdersState>()(
           items: snapshotItems,
           total,
           status: "Pendiente",
+          notes,
           createdAt: Date.now(),
         };
 

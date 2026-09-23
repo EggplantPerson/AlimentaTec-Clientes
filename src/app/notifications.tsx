@@ -2,15 +2,15 @@ import { Ionicons } from "@expo/vector-icons";
 import { Stack } from "expo-router";
 import { useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    FlatList,
-    Pressable,
-    StyleSheet,
-    Text,
-    View,
+  ActivityIndicator,
+  Alert,
+  FlatList,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
 } from "react-native";
-import { deleteOrder } from "../services/orders.service";
+import { updateOrder } from "../services/orders.service";
 import { Order, OrderStatus, useOrdersStore } from "../store/orderStore";
 import { useToastStore } from "../store/toastStore";
 
@@ -21,6 +21,7 @@ const STATUS_COLORS: Record<OrderStatus, { background: string; text: string }> =
     "En preparación": { background: "#dbeafe", text: "#1e40af" },
     Listo: { background: "#dcfce7", text: "#166534" },
     Entregado: { background: "#e5e5e5", text: "#525252" },
+    Cancelado: { background: "#fee2e2", text: "#991b1b" },
   };
 
 // Función auxiliar para dar formato a la hora de creación del pedido
@@ -56,7 +57,10 @@ export default function NotificationsScreen() {
   const handleConfirmCancel = async (order: Order) => {
     setCancelingId(order.id);
     try {
-      await deleteOrder(order.uid);
+      await updateOrder(order.uid, {
+        status: "Cancelado",
+        notes: null,
+      });
       removeOrder(order.id);
       useToastStore.getState().showToast("Pedido cancelado");
     } catch (e) {
@@ -133,6 +137,11 @@ export default function NotificationsScreen() {
                   </Text>
                 </View>
               </View>
+
+              {/* Nota general de la orden, si el cliente escribió una */}
+              {item.notes ? (
+                <Text style={styles.orderNote}>Nota: {item.notes}</Text>
+              ) : null}
 
               {/* Botón de cancelar: solo visible mientras el pedido está en espera */}
               {canCancel && (
@@ -222,6 +231,12 @@ const styles = StyleSheet.create({
   statusText: {
     fontSize: 12,
     fontWeight: "700",
+  },
+  orderNote: {
+    fontSize: 12,
+    color: "#4d7c62",
+    fontStyle: "italic",
+    marginTop: 6,
   },
   cancelButton: {
     marginTop: 10,
