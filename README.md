@@ -1,17 +1,17 @@
 # Requisitos
 
-1.Node.js (versión compatible con Expo SDK 57 y React 19 — se recomienda Node 20 o superior)
-2.pnpm
-3.TypeScript ~6.0.3
-4.Expo CLI 
-5.App Expo Go instalada en un celular físico, o un emulador Android / simulador iOS configurado
-6.El backend (API + sockets) corriendo y accesible en la red
+1. Node.js (versión compatible con Expo SDK 57 y React 19 — se recomienda Node 20 o superior)
+2. pnpm
+3. TypeScript ~6.0.3
+4. Expo CLI 
+5. App Expo Go instalada en un celular físico, o un emulador Android / simulador iOS configurado
+6. El backend (API + sockets) corriendo y accesible en la red
 # Instalacion y ejecucion
 
-1.Clonar el repositorio del frontend
-2.Ejecutar pnpm install desde la carpeta raíz del proyecto para instalar todas las dependencias
-3.Verificar que el backend (servidor + base de datos + sockets) ya esté corriendo y accesible en esas URLs antes de levantar el frontend
-4.ejecutar pnpm expo start
+1. Clonar el repositorio del frontend
+2. Ejecutar pnpm install desde la carpeta raíz del proyecto para instalar todas las dependencias
+3. Verificar que el backend (servidor + base de datos + sockets) ya esté corriendo y accesible en esas URLs antes de levantar el frontend
+4. ejecutar pnpm expo start
 Desde la terminal que se abre:
 Escanear el código QR con la app Expo Go para probar en un celular físico, o
 Ejecutar pnpm run android para abrir en un emulador Android, o
