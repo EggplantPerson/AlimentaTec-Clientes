@@ -1,18 +1,20 @@
 import { router, Stack } from "expo-router";
 import {
-  FlatList,
-  Image,
-  Pressable,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
+    FlatList,
+    Image,
+    KeyboardAvoidingView,
+    Platform,
+    Pressable,
+    StyleSheet,
+    Text,
+    TextInput,
+    View,
 } from "react-native";
 import {
-  MAX_QUANTITY_PER_PRODUCT,
-  MAX_TOTAL_ITEMS,
-  useCartStore,
-  useCartTotal,
+    MAX_QUANTITY_PER_PRODUCT,
+    MAX_TOTAL_ITEMS,
+    useCartStore,
+    useCartTotal,
 } from "../store/cartStore";
 import { useCanPlaceOrder } from "../store/orderStore";
 
@@ -37,7 +39,10 @@ export default function CartScreen() {
   const { canOrder, pendingOrder } = useCanPlaceOrder();
 
   return (
-    <View style={styles.container}>
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+    >
       {/* Opciones del header navegable con Expo Router */}
       <Stack.Screen
         options={{
@@ -74,11 +79,14 @@ export default function CartScreen() {
         <>
           <FlatList
             data={items}
-            keyExtractor={(item) => item.product.id}
+            keyExtractor={(item) => item.lineId}
             contentContainerStyle={styles.listContent}
             renderItem={({ item }) => {
               const reachedLimit =
                 item.quantity >= MAX_QUANTITY_PER_PRODUCT || reachedTotalLimit;
+              // Precio unitario real de esta línea: producto + adicional elegido (si hay)
+              const unitPrice = item.product.price + (item.addon?.price ?? 0);
+
               return (
                 <View style={styles.itemRow}>
                   {/* Miniatura de la imagen del producto */}
@@ -92,15 +100,23 @@ export default function CartScreen() {
                     <Text style={styles.itemName} numberOfLines={1}>
                       {item.product.name}
                     </Text>
+
+                    {/* Adicional elegido para esta línea, si hay */}
+                    {item.addon && (
+                      <Text style={styles.itemAddon} numberOfLines={1}>
+                        + {item.addon.name} (+${item.addon.price})
+                      </Text>
+                    )}
+
                     <Text style={styles.itemPrice}>
-                      ${item.product.price.toFixed(2)}
+                      ${unitPrice.toFixed(2)}
                     </Text>
 
                     {/* Controles de incremento/decremento de unidades */}
                     <View style={styles.quantityRow}>
                       <Pressable
                         style={styles.quantityButton}
-                        onPress={() => decreaseQuantity(item.product.id)}
+                        onPress={() => decreaseQuantity(item.lineId)}
                       >
                         <Text style={styles.quantityButtonText}>−</Text>
                       </Pressable>
@@ -110,7 +126,7 @@ export default function CartScreen() {
                           styles.quantityButton,
                           reachedLimit && styles.quantityButtonDisabled,
                         ]}
-                        onPress={() => increaseQuantity(item.product.id)}
+                        onPress={() => increaseQuantity(item.lineId)}
                         disabled={reachedLimit}
                       >
                         <Text
@@ -123,16 +139,16 @@ export default function CartScreen() {
                         </Text>
                       </Pressable>
 
-                      {/* Botón para eliminar el producto por completo */}
+                      {/* Botón para eliminar la línea por completo */}
                       <Pressable
                         style={styles.removeButton}
-                        onPress={() => removeItem(item.product.id)}
+                        onPress={() => removeItem(item.lineId)}
                       >
                         <Text style={styles.removeButtonText}>Quitar</Text>
                       </Pressable>
                     </View>
 
-                    {/* Mensaje informativo en caso de tope de stock por producto */}
+                    {/* Mensaje informativo en caso de tope de stock por combinación */}
                     {reachedLimit && (
                       <Text style={styles.limitText}>
                         Máximo {MAX_QUANTITY_PER_PRODUCT} por producto
@@ -178,7 +194,7 @@ export default function CartScreen() {
           </View>
         </>
       )}
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -244,6 +260,11 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "700",
     color: "#14532d",
+  },
+  itemAddon: {
+    fontSize: 12,
+    color: "#4d7c62",
+    marginTop: 2,
   },
   itemPrice: {
     fontSize: 13,

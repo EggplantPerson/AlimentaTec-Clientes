@@ -2,6 +2,9 @@ import { useEffect, useMemo } from "react";
 import { create } from "zustand";
 import { getProducts } from "../services/product.service";
 
+// Categoría especial: sus productos son "adicionales" (no se muestran como productos navegables)
+const ADDONS_CATEGORY = "Adicionales";
+
 // Estructura de datos para representar un producto
 export interface Product {
   id: string;
@@ -12,6 +15,7 @@ export interface Product {
   available: boolean;
   category: string;
   notes: string;
+  addons: string[]; // ids de productos-adicional disponibles para este producto
 }
 
 // Tipo de utilidad para crear o editar un producto omitiendo el id autogenerado
@@ -71,6 +75,7 @@ export const useProductsStore = create<ProductsState>((set, get) => ({
         available: product.available,
         category: product.category,
         notes: "",
+        addons: Array.isArray(product.addons) ? product.addons : [],
       }));
 
       set({
@@ -222,6 +227,7 @@ export const useProductsStore = create<ProductsState>((set, get) => ({
 }));
 
 // Hook para obtener las categorías disponibles junto con los filtros especiales de UI
+// (la categoría "Adicionales" nunca aparece como chip navegable)
 export function useCategories(): string[] {
   const products = useProductsStore((state) => state.products);
   const categories = useProductsStore((state) => state.categories);
@@ -233,26 +239,27 @@ export function useCategories(): string[] {
           ? categories
           : products.map((product) => product.category),
       ),
-    );
+    ).filter((cat) => cat !== ADDONS_CATEGORY);
 
     return [ALL_CATEGORIES_LABEL, AVAILABLE_FILTER_LABEL, ...unique];
   }, [categories, products]);
 }
 
 // Hook para obtener la lista de productos filtrada por categoría y ordenada por disponibilidad
+// (los productos de la categoría "Adicionales" nunca se listan como producto navegable)
 export function useFilteredProducts(): Product[] {
   const products = useProductsStore((state) => state.products);
   const selectedCategory = useProductsStore((state) => state.selectedCategory);
 
   return useMemo(() => {
-    let list = products;
+    let list = products.filter(
+      (product) => product.category !== ADDONS_CATEGORY,
+    );
 
     if (selectedCategory === AVAILABLE_FILTER_LABEL) {
-      list = products.filter((product) => product.available);
+      list = list.filter((product) => product.available);
     } else if (selectedCategory !== ALL_CATEGORIES_LABEL) {
-      list = products.filter(
-        (product) => product.category === selectedCategory,
-      );
+      list = list.filter((product) => product.category === selectedCategory);
     }
 
     return [...list].sort((a, b) => {
@@ -260,6 +267,23 @@ export function useFilteredProducts(): Product[] {
       return a.available ? -1 : 1;
     });
   }, [products, selectedCategory]);
+}
+
+// Hook para resolver los ids guardados en `producto.addons` a los productos-adicional reales
+// (busca en el store completo sin filtrar categoría; descarta ids que no existan o no sean de "Adicionales")
+export function useAddonsFor(product: Product | undefined): Product[] {
+  const products = useProductsStore((state) => state.products);
+
+  return useMemo(() => {
+    if (!product) return [];
+    return (product.addons ?? [])
+      .map((id) =>
+        products.find(
+          (p) => String(p.id) === id && p.category === ADDONS_CATEGORY,
+        ),
+      )
+      .filter((p): p is Product => Boolean(p));
+  }, [product, products]);
 }
 
 // Hook de efecto para cargar automáticamente la lista de productos al montar el componente

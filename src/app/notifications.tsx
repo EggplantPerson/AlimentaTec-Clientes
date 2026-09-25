@@ -2,13 +2,13 @@ import { Ionicons } from "@expo/vector-icons";
 import { Stack } from "expo-router";
 import { useState } from "react";
 import {
-  ActivityIndicator,
-  Alert,
-  FlatList,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
+    ActivityIndicator,
+    Alert,
+    FlatList,
+    Pressable,
+    StyleSheet,
+    Text,
+    View,
 } from "react-native";
 import { updateOrder } from "../services/orders.service";
 import { Order, OrderStatus, useOrdersStore } from "../store/orderStore";
@@ -57,9 +57,10 @@ export default function NotificationsScreen() {
   const handleConfirmCancel = async (order: Order) => {
     setCancelingId(order.id);
     try {
+      // Mismo mecanismo que usa el admin: se marca como "Cancelado" en vez de borrar el registro.
+      // No mandamos "notes" para no pisar el motivo que pondría el admin si cancela él mismo.
       await updateOrder(order.uid, {
         status: "Cancelado",
-        notes: null,
       });
       removeOrder(order.id);
       useToastStore.getState().showToast("Pedido cancelado");
@@ -114,11 +115,14 @@ export default function NotificationsScreen() {
                 </Text>
               </View>
 
-              {/* Resumen concatenado de productos incluidos */}
-              <Text style={styles.itemsSummary} numberOfLines={2}>
+              {/* Resumen concatenado de productos incluidos, con su adicional si tiene */}
+              <Text style={styles.itemsSummary} numberOfLines={3}>
                 {item.items
                   .map(
-                    (orderItem) => `${orderItem.quantity}x ${orderItem.name}`,
+                    (orderItem) =>
+                      `${orderItem.quantity}x ${orderItem.name}${
+                        orderItem.addonLabel ? ` + ${orderItem.addonLabel}` : ""
+                      }`,
                   )
                   .join(", ")}
               </Text>
@@ -137,11 +141,6 @@ export default function NotificationsScreen() {
                   </Text>
                 </View>
               </View>
-
-              {/* Nota general de la orden, si el cliente escribió una */}
-              {item.notes ? (
-                <Text style={styles.orderNote}>Nota: {item.notes}</Text>
-              ) : null}
 
               {/* Botón de cancelar: solo visible mientras el pedido está en espera */}
               {canCancel && (
@@ -231,12 +230,6 @@ const styles = StyleSheet.create({
   statusText: {
     fontSize: 12,
     fontWeight: "700",
-  },
-  orderNote: {
-    fontSize: 12,
-    color: "#4d7c62",
-    fontStyle: "italic",
-    marginTop: 6,
   },
   cancelButton: {
     marginTop: 10,

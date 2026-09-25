@@ -31,6 +31,9 @@ export default function OrderConfirmationScreen() {
       items.forEach((item) => {
         for (let i = 0; i < item.quantity; i++) {
           products.push(String(item.product.id));
+          if (item.addon) {
+            products.push(`${item.addon.name} (+$${item.addon.price})`);
+          }
         }
       });
 
@@ -81,13 +84,20 @@ export default function OrderConfirmationScreen() {
         {/* Tarjeta con el desglose completo del pedido */}
         <View style={styles.summaryBox}>
           {items.map((item) => (
-            <View key={item.product.id} style={styles.summaryItemBlock}>
+            <View key={item.lineId} style={styles.summaryItemBlock}>
               <View style={styles.summaryRow}>
                 <Text style={styles.summaryItemName}>
                   {item.quantity}x {item.product.name}
+                  {item.addon
+                    ? ` + ${item.addon.name} (+$${item.addon.price})`
+                    : ""}
                 </Text>
                 <Text style={styles.summaryItemPrice}>
-                  ${(item.product.price * item.quantity).toFixed(2)}
+                  $
+                  {(
+                    (item.product.price + (item.addon?.price ?? 0)) *
+                    item.quantity
+                  ).toFixed(2)}
                 </Text>
               </View>
             </View>
@@ -179,12 +189,15 @@ const styles = StyleSheet.create({
   summaryRow: {
     flexDirection: "row",
     justifyContent: "space-between",
+    alignItems: "flex-start",
     marginBottom: 2,
   },
   summaryItemBlock: {
     marginBottom: 8,
   },
   summaryItemName: {
+    flex: 1,
+    marginRight: 8,
     fontSize: 14,
     color: "#14532d",
   },

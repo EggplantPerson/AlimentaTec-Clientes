@@ -3,14 +3,26 @@ import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 import { Product } from "./productsStore";
 
-// Límites permitidos por producto y para el total del carrito
+// Límites permitidos por combinación producto+adicional y para el total del carrito
 export const MAX_QUANTITY_PER_PRODUCT = 2;
 export const MAX_TOTAL_ITEMS = 4;
 
+// Genera un identificador único por línea: mismo producto con distinto adicional = línea distinta
+function buildLineId(productId: string, addonId?: string | null): string {
+  return `${productId}::${addonId ?? "none"}`;
+}
+
 // Estructura de un elemento dentro del carrito
 export interface CartItem {
+  lineId: string;
   product: Product;
+  addon?: Product | null; // producto-adicional elegido (de la categoría "Adicionales"), o null
   quantity: number;
+}
+
+// Precio unitario real de una línea: producto + adicional elegido (si hay)
+function unitPrice(item: CartItem): number {
+  return item.product.price + (item.addon?.price ?? 0);
 }
 
 // Función auxiliar para calcular la suma total de unidades en el carrito
@@ -22,10 +34,10 @@ function getTotalQuantity(items: CartItem[]): number {
 interface CartState {
   items: CartItem[];
   orderNote: string;
-  addItem: (product: Product) => void;
-  removeItem: (productId: string) => void;
-  increaseQuantity: (productId: string) => void;
-  decreaseQuantity: (productId: string) => void;
+  addItem: (product: Product, addon?: Product | null) => void;
+  removeItem: (lineId: string) => void;
+  increaseQuantity: (lineId: string) => void;
+  decreaseQuantity: (lineId: string) => void;
   clearCart: () => void;
   removeUnavailableItems: (currentProducts: Product[]) => void;
   setOrderNote: (note: string) => void;
@@ -38,72 +50,89 @@ export const useCartStore = create<CartState>()(
       items: [],
       orderNote: "",
 
-      // Agrega un producto al carrito respetando los límites de stock por producto y total
-      addItem: (product) =>
+      // Agrega un producto (con adicional opcional) respetando los límites por línea y totales.
+      // Si el carrito estaba vacío, sanitiza la nota heredada (evita arrastrar un motivo de cancelación).
+      addItem: (product, addon = null) =>
         set((state) => {
           if (getTotalQuantity(state.items) >= MAX_TOTAL_ITEMS) return state;
 
-          const existing = state.items.find(
-            (item) => item.product.id === product.id,
-          );
+          const lineId = buildLineId(product.id, addon?.id);
+          const existing = state.items.find((item) => item.lineId === lineId);
+
           if (existing) {
             if (existing.quantity >= MAX_QUANTITY_PER_PRODUCT) return state;
             return {
               items: state.items.map((item) =>
-                item.product.id === product.id
+                item.lineId === lineId
                   ? { ...item, quantity: item.quantity + 1 }
                   : item,
               ),
             };
           }
-          return { items: [...state.items, { product, quantity: 1 }] };
+
+          return {
+            items: [...state.items, { lineId, product, addon, quantity: 1 }],
+          };
         }),
 
-      // Elimina completamente un producto del carrito por su ID
-      removeItem: (productId) =>
-        set((state) => ({
-          items: state.items.filter((item) => item.product.id !== productId),
-        })),
+      // Elimina completamente una línea del carrito por su lineId y limpia la nota si queda vacío
+      removeItem: (lineId) =>
+        set((state) => {
+          const newItems = state.items.filter((item) => item.lineId !== lineId);
+          return {
+            items: newItems,
+            orderNote: newItems.length === 0 ? "" : state.orderNote,
+          };
+        }),
 
-      // Incrementa la cantidad de un producto específico si no excede los límites
-      increaseQuantity: (productId) =>
+      // Incrementa la cantidad de una línea específica si no excede los límites
+      increaseQuantity: (lineId) =>
         set((state) => {
           if (getTotalQuantity(state.items) >= MAX_TOTAL_ITEMS) return state;
           return {
             items: state.items.map((item) =>
-              item.product.id === productId &&
-              item.quantity < MAX_QUANTITY_PER_PRODUCT
+              item.lineId === lineId && item.quantity < MAX_QUANTITY_PER_PRODUCT
                 ? { ...item, quantity: item.quantity + 1 }
                 : item,
             ),
           };
         }),
 
-      // Reduce la cantidad de un producto y lo remueve si su cantidad llega a cero
-      decreaseQuantity: (productId) =>
-        set((state) => ({
-          items: state.items
+      // Reduce la cantidad de una línea, la remueve si llega a cero, y limpia la nota si el carrito queda vacío
+      decreaseQuantity: (lineId) =>
+        set((state) => {
+          const newItems = state.items
             .map((item) =>
-              item.product.id === productId
+              item.lineId === lineId
                 ? { ...item, quantity: item.quantity - 1 }
                 : item,
             )
-            .filter((item) => item.quantity > 0),
-        })),
+            .filter((item) => item.quantity > 0);
+
+          return {
+            items: newItems,
+            orderNote: newItems.length === 0 ? "" : state.orderNote,
+          };
+        }),
 
       // Vacía todos los elementos del carrito y su nota
       clearCart: () => set({ items: [], orderNote: "" }),
 
-      // Elimina del carrito cualquier producto que ya no exista o ya no esté disponible
+      // Elimina del carrito cualquier línea cuyo producto ya no exista o no esté disponible
       removeUnavailableItems: (currentProducts) =>
-        set((state) => ({
-          items: state.items.filter((item) => {
+        set((state) => {
+          const newItems = state.items.filter((item) => {
             const currentProduct = currentProducts.find(
               (p) => p.id === item.product.id,
             );
             return currentProduct !== undefined && currentProduct.available;
-          }),
-        })),
+          });
+
+          return {
+            items: newItems,
+            orderNote: newItems.length === 0 ? "" : state.orderNote,
+          };
+        }),
 
       // Guarda la nota general aplicable a toda la orden
       setOrderNote: (note) => set({ orderNote: note }),
@@ -122,12 +151,9 @@ export function useCartItemCount(): number {
   );
 }
 
-// Hook para calcular el monto total a pagar de la compra
+// Hook para calcular el monto total a pagar: precio del producto + precio del adicional elegido
 export function useCartTotal(): number {
   return useCartStore((state) =>
-    state.items.reduce(
-      (sum, item) => sum + item.product.price * item.quantity,
-      0,
-    ),
+    state.items.reduce((sum, item) => sum + unitPrice(item) * item.quantity, 0),
   );
 }

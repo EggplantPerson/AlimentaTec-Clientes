@@ -19,7 +19,11 @@ import {
   useCartItemCount,
   useCartStore,
 } from "../../store/cartStore";
-import { useProductsStore } from "../../store/productsStore";
+import {
+  Product,
+  useAddonsFor,
+  useProductsStore,
+} from "../../store/productsStore";
 
 // Componente principal de la pantalla de detalle de un producto
 export default function ProductDetailScreen() {
@@ -45,6 +49,9 @@ export default function ProductDetailScreen() {
   // Estado local para la notificación visual temporal
   const [showCartNotification, setShowCartNotification] = useState(false);
 
+  // Adicional elegido para este producto (uno solo, u opcional)
+  const [selectedAddon, setSelectedAddon] = useState<Product | null>(null);
+
   // Selecciona automáticamente el producto en el store cuando cambia la ruta
   useEffect(() => {
     if (id) void selectProduct(id);
@@ -53,20 +60,26 @@ export default function ProductDetailScreen() {
   // Determina el objeto de producto a mostrar combinando estado local y selecciones
   const displayedProduct = product ?? selectedProduct;
 
-  // Calcula las unidades actuales agregadas de este producto específico
-  const currentProductQuantity =
-    cartItems.find((item) => item.product.id === displayedProduct?.id)
-      ?.quantity ?? 0;
+  // Resuelve los ids guardados en displayedProduct.addons a los productos-adicional reales
+  const addonOptions = useAddonsFor(displayedProduct);
 
-  // Comprueba si se alcanzó el límite de compra para este producto individual
+  // Calcula las unidades actuales agregadas de ESTA combinación producto+adicional
+  const currentProductQuantity =
+    cartItems.find(
+      (item) =>
+        item.product.id === displayedProduct?.id &&
+        (item.addon?.id ?? null) === (selectedAddon?.id ?? null),
+    )?.quantity ?? 0;
+
+  // Comprueba si se alcanzó el límite de compra para esta combinación específica
   const reachedProductLimit =
     currentProductQuantity >= MAX_QUANTITY_PER_PRODUCT;
 
-  // Agrega el producto al carrito y dispara un mensaje de confirmación temporal
+  // Agrega el producto (con el adicional elegido, si hay) al carrito
   function handleAddToCart() {
     if (!displayedProduct) return;
 
-    addItem(displayedProduct);
+    addItem(displayedProduct, selectedAddon);
 
     setShowCartNotification(true);
 
@@ -160,7 +173,10 @@ export default function ProductDetailScreen() {
           {/* Sección de precio y acción de compra */}
           <View style={styles.priceRow}>
             <Text style={styles.price}>
-              ${displayedProduct.price.toFixed(2)}
+              $
+              {(displayedProduct.price + (selectedAddon?.price ?? 0)).toFixed(
+                2,
+              )}
             </Text>
 
             {displayedProduct.available && (
@@ -182,7 +198,7 @@ export default function ProductDetailScreen() {
           {reachedProductLimit && (
             <Text style={styles.totalLimitText}>
               Alcanzaste el máximo de {MAX_QUANTITY_PER_PRODUCT} unidades para
-              este producto.
+              esta combinación.
             </Text>
           )}
 
@@ -190,6 +206,52 @@ export default function ProductDetailScreen() {
             <Text style={styles.totalLimitText}>
               Alcanzaste el máximo de {MAX_TOTAL_ITEMS} productos por pedido.
             </Text>
+          )}
+
+          {/* Selector de adicional: uno solo, opcional */}
+          {addonOptions.length > 0 && (
+            <>
+              <Text style={styles.sectionTitle}>Adicional (opcional)</Text>
+              <View style={styles.addonRow}>
+                <Pressable
+                  style={[
+                    styles.addonChip,
+                    selectedAddon === null && styles.addonChipSelected,
+                  ]}
+                  onPress={() => setSelectedAddon(null)}
+                >
+                  <Text
+                    style={[
+                      styles.addonChipText,
+                      selectedAddon === null && styles.addonChipTextSelected,
+                    ]}
+                  >
+                    Sin adicional
+                  </Text>
+                </Pressable>
+                {addonOptions.map((addon) => (
+                  <Pressable
+                    key={addon.id}
+                    style={[
+                      styles.addonChip,
+                      selectedAddon?.id === addon.id &&
+                        styles.addonChipSelected,
+                    ]}
+                    onPress={() => setSelectedAddon(addon)}
+                  >
+                    <Text
+                      style={[
+                        styles.addonChipText,
+                        selectedAddon?.id === addon.id &&
+                          styles.addonChipTextSelected,
+                      ]}
+                    >
+                      {addon.name} (+${addon.price})
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
+            </>
           )}
 
           <Text style={styles.sectionTitle}>Descripción</Text>
@@ -350,6 +412,32 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#555",
     lineHeight: 20,
+  },
+  addonRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    marginBottom: 8,
+  },
+  addonChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: "#dcfce7",
+    backgroundColor: "#f0fdf4",
+  },
+  addonChipSelected: {
+    backgroundColor: "#15803d",
+    borderColor: "#15803d",
+  },
+  addonChipText: {
+    fontSize: 13,
+    color: "#14532d",
+    fontWeight: "600",
+  },
+  addonChipTextSelected: {
+    color: "#fff",
   },
   cartNotification: {
     position: "absolute",

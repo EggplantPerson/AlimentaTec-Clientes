@@ -117,6 +117,7 @@ function useOrderSocket() {
       price: number;
       available: boolean;
       category: string;
+      addons?: string[];
     }): Product => ({
       id: String(product.id),
       name: product.name,
@@ -126,6 +127,7 @@ function useOrderSocket() {
       available: product.available,
       category: product.category,
       notes: "",
+      addons: Array.isArray(product.addons) ? product.addons : [],
     });
 
     const handleProductCreated = (

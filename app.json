@@ -4,7 +4,7 @@
     "slug": "Alimentatec",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/loading/tenor.gif",
+    "icon": "./assets/images/icon.png",
     "scheme": "productsapp",
     "userInterfaceStyle": "automatic",
     "android": {
@@ -14,7 +14,8 @@
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "package": "com.vladimire.alimentatec"
     },
     "web": {
       "output": "static",
@@ -32,11 +33,18 @@
       ],
       "expo-font",
       "expo-image",
-      "expo-asset"
+      "expo-asset",
+      "expo-web-browser"
     ],
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "da71ffee-0b33-4ba3-b5de-06001cb44bad"
+      }
     }
   }
 }

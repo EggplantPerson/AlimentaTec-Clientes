@@ -20,6 +20,7 @@ export interface OrderItem {
   price: number;
   quantity: number;
   image?: string;
+  addonLabel?: string | null;
 }
 
 // Estructura de un pedido individual
@@ -30,7 +31,7 @@ export interface Order {
   items: OrderItem[];
   total: number;
   status: OrderStatus;
-  notes?: string; // nota general aplicable a toda la orden
+  notes?: string; // nota general aplicable a toda la orden (o motivo de cancelación del admin)
   createdAt: number;
 }
 
@@ -46,6 +47,7 @@ interface OrdersState {
     notes?: string,
   ) => string;
   updateOrderStatus: (orderId: string, status: OrderStatus) => void;
+
   removeOrder: (orderId: string) => void;
   getOrderById: (orderId: string) => Order | undefined;
   clearOrders: () => void;
@@ -63,9 +65,12 @@ export const useOrdersStore = create<OrdersState>()(
         const snapshotItems: OrderItem[] = items.map((item) => ({
           productId: item.product.id,
           name: item.product.name,
-          price: item.product.price,
+          price: item.product.price + (item.addon?.price ?? 0),
           quantity: item.quantity,
           image: item.product.image,
+          addonLabel: item.addon
+            ? `${item.addon.name} (+$${item.addon.price})`
+            : null,
         }));
 
         const localOrderId = `${uid}-${Date.now()}`;
@@ -91,6 +96,7 @@ export const useOrdersStore = create<OrdersState>()(
 
       // Actualiza el estado actual de una orden por el uid del dispositivo.
       // Si el nuevo estado es "Entregado", la orden se elimina del historial en vez de solo actualizarse.
+      // Si llega un "notes" (por ejemplo, el motivo de cancelación del admin), se guarda también.
       updateOrderStatus: (uid: string, status: OrderStatus) =>
         set((state) => {
           const ordersOfDevice = state.orders
