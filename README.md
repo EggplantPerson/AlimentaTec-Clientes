@@ -12,7 +12,7 @@
 1. Clonar la rama prod del repositorio
 2. Ejecutar pnpm install desde la carpeta raíz del proyecto para instalar todas las dependencias
 3. Verificar que el backend (servidor + base de datos + sockets) ya esté corriendo y accesible en esas URLs antes de levantar el frontend
-4. ejecutar pnpm expo start
+4. Ejecutar pnpm expo start
    Desde la terminal que se abre:
 5. Escanear el código QR con la app Expo Go para probar en un celular físico, o
 6. Ejecutar pnpm run android para abrir en un emulador Android, o
