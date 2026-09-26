@@ -1,66 +1,105 @@
-import React, { useEffect, useState } from 'react';
+import { Ionicons } from "@expo/vector-icons";
+import { router, Stack, useLocalSearchParams } from "expo-router";
+import { useEffect, useState } from "react";
 import {
-  View,
-  Text,
+  ActivityIndicator,
   Image,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
   ScrollView,
   StyleSheet,
-  Pressable,
-  TextInput,
-  ActivityIndicator,
-  Alert,
-} from 'react-native';
-import { Stack, useLocalSearchParams } from 'expo-router';
-import { useProductsStore } from '../../store/productsStore';
+  Text,
+  View,
+} from "react-native";
 
+import {
+  MAX_QUANTITY_PER_PRODUCT,
+  MAX_TOTAL_ITEMS,
+  useCartItemCount,
+  useCartStore,
+} from "../../store/cartStore";
+import {
+  Product,
+  useAddonsFor,
+  useProductsStore,
+} from "../../store/productsStore";
+
+// Componente principal de la pantalla de detalle de un producto
 export default function ProductDetailScreen() {
+  // Obtiene el ID del producto enviado por los parámetros de la URL
   const { id } = useLocalSearchParams<{ id: string }>();
-  const product = useProductsStore((state) => state.products.find((p) => p.id === id));
+
+  // Selección de datos y acciones del store global de productos
+  const product = useProductsStore((state) =>
+    state.products.find((p) => p.id === id),
+  );
   const selectedProduct = useProductsStore((state) => state.selectedProduct);
   const selectProduct = useProductsStore((state) => state.selectProduct);
-  const updateProduct = useProductsStore((state) => state.updateProduct);
   const loading = useProductsStore((state) => state.loading);
-  const saving = useProductsStore((state) => state.saving);
 
-  const [isEditingNote, setIsEditingNote] = useState(false);
-  const [noteText, setNoteText] = useState('');
+  // Selección de datos y acciones del store global del carrito
+  const addItem = useCartStore((state) => state.addItem);
+  const cartItems = useCartStore((state) => state.items);
+  const cartCount = useCartItemCount();
 
+  // Comprueba si se alcanzó el límite global de artículos en el carrito
+  const reachedTotalLimit = cartCount >= MAX_TOTAL_ITEMS;
+
+  // Estado local para la notificación visual temporal
+  const [showCartNotification, setShowCartNotification] = useState(false);
+
+  // Adicional elegido para este producto (uno solo, u opcional)
+  const [selectedAddon, setSelectedAddon] = useState<Product | null>(null);
+
+  // Selecciona automáticamente el producto en el store cuando cambia la ruta
   useEffect(() => {
     if (id) void selectProduct(id);
   }, [id, selectProduct]);
 
+  // Determina el objeto de producto a mostrar combinando estado local y selecciones
   const displayedProduct = product ?? selectedProduct;
 
-  useEffect(() => {
-    if (displayedProduct) {
-      setNoteText(displayedProduct.notes ?? '');
-    }
-  }, [displayedProduct?.id]);
+  // Resuelve los ids guardados en displayedProduct.addons a los productos-adicional reales
+  const addonOptions = useAddonsFor(displayedProduct);
 
-  async function handleSaveNote() {
+  // Calcula las unidades actuales agregadas de ESTA combinación producto+adicional
+  const currentProductQuantity =
+    cartItems.find(
+      (item) =>
+        item.product.id === displayedProduct?.id &&
+        (item.addon?.id ?? null) === (selectedAddon?.id ?? null),
+    )?.quantity ?? 0;
+
+  // Comprueba si se alcanzó el límite de compra para esta combinación específica
+  const reachedProductLimit =
+    currentProductQuantity >= MAX_QUANTITY_PER_PRODUCT;
+
+  // Agrega el producto (con el adicional elegido, si hay) al carrito
+  function handleAddToCart() {
     if (!displayedProduct) return;
-    try {
-      await updateProduct(displayedProduct.id, { notes: noteText.trim() });
-      setIsEditingNote(false);
-    } catch {
-      Alert.alert('Error', 'No se pudo guardar la nota.');
-    }
+
+    addItem(displayedProduct, selectedAddon);
+
+    setShowCartNotification(true);
+
+    setTimeout(() => {
+      setShowCartNotification(false);
+    }, 3000);
   }
 
-  function handleCancelNote() {
-    if (!displayedProduct) return;
-    setNoteText(displayedProduct.notes ?? '');
-    setIsEditingNote(false);
-  }
-
+  // Muestra un indicador de carga mientras se recuperan los datos
   if (loading && !displayedProduct) {
-    return <ActivityIndicator style={styles.centered} size="large" color="#15803d" />;
+    return (
+      <ActivityIndicator style={styles.centered} size="large" color="#15803d" />
+    );
   }
 
+  // Renderiza una vista de error si el producto no existe en el catálogo
   if (!displayedProduct) {
     return (
       <View style={styles.centered}>
-        <Stack.Screen options={{ title: 'Producto no encontrado' }} />
+        <Stack.Screen options={{ title: "Producto no encontrado" }} />
         <Text style={styles.notFoundText}>
           El producto solicitado no existe o fue eliminado.
         </Text>
@@ -69,130 +108,219 @@ export default function ProductDetailScreen() {
   }
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Stack.Screen options={{ title: displayedProduct.name }} />
+    // Evita que el teclado virtual cubra los campos de entrada en pantalla
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+    >
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={styles.content}
+        keyboardShouldPersistTaps="handled"
+      >
+        {/* Configuración dinámica de la barra superior de navegación */}
+        <Stack.Screen
+          options={{
+            title: displayedProduct.name,
+            headerStyle: { backgroundColor: "#15803d" },
+            headerTitleStyle: { color: "#fffdfd", fontWeight: "700" },
+            headerRight: () => (
+              <Pressable
+                style={styles.headerCartButton}
+                onPress={() => router.push("/cart")}
+              >
+                <Ionicons name="cart-outline" size={22} color="#fff" />
+                {cartCount > 0 && (
+                  <View style={styles.headerCartBadge}>
+                    <Text style={styles.headerCartBadgeText}>{cartCount}</Text>
+                  </View>
+                )}
+              </Pressable>
+            ),
+          }}
+        />
 
-      <Image source={{ uri: displayedProduct.image }} style={styles.image} />
-
-      <View style={styles.body}>
-        <View style={styles.headerRow}>
-          <Text style={styles.name}>{displayedProduct.name}</Text>
-          <View
-            style={[
-              styles.badge,
-              displayedProduct.available ? styles.badgeAvailable : styles.badgeUnavailable,
-            ]}
-          >
-            <Text
+        {/* Detalle visual y datos del producto */}
+        <View style={styles.body}>
+          <Image
+            source={{ uri: displayedProduct.image }}
+            style={styles.image}
+            resizeMode="cover"
+          />
+          <View style={styles.headerRow}>
+            {/* Indicador visual de la disponibilidad en inventario */}
+            <View
               style={[
-                styles.badgeText,
+                styles.badge,
                 displayedProduct.available
-                  ? styles.badgeTextAvailable
-                  : styles.badgeTextUnavailable,
+                  ? styles.badgeAvailable
+                  : styles.badgeUnavailable,
               ]}
             >
-              {displayedProduct.available ? 'Disponible' : 'Agotado'}
-            </Text>
-          </View>
-        </View>
-
-        <Text style={styles.category}>{displayedProduct.category}</Text>
-        <Text style={styles.price}>${displayedProduct.price.toFixed(2)}</Text>
-
-        <Text style={styles.sectionTitle}>Descripción</Text>
-        <Text style={styles.description}>{displayedProduct.description}</Text>
-
-        <Text style={styles.sectionTitle}>Nota</Text>
-
-        {isEditingNote ? (
-          <View>
-            <TextInput
-              value={noteText}
-              onChangeText={setNoteText}
-              style={[styles.input, styles.multiline]}
-              placeholder="Ej. Sin lechuga, sin cebolla..."
-              placeholderTextColor="#6b9c80"
-              multiline
-              autoFocus
-            />
-            <View style={styles.noteButtonsRow}>
-              <Pressable
-                style={[styles.noteButton, styles.cancelButton]}
-                onPress={handleCancelNote}
-                disabled={saving}
+              <Text
+                style={[
+                  styles.badgeText,
+                  displayedProduct.available
+                    ? styles.badgeTextAvailable
+                    : styles.badgeTextUnavailable,
+                ]}
               >
-                <Text style={styles.cancelButtonText}>Cancelar</Text>
-              </Pressable>
-              <Pressable
-                style={[styles.noteButton, styles.saveButton]}
-                onPress={handleSaveNote}
-                disabled={saving}
-              >
-                <Text style={styles.saveButtonText}>
-                  {saving ? 'Guardando...' : 'Guardar nota'}
-                </Text>
-              </Pressable>
+                {displayedProduct.available ? "Disponible" : "Agotado"}
+              </Text>
             </View>
           </View>
-        ) : (
-          <View style={styles.noteContainer}>
-            <Text style={styles.noteText}>
-              {displayedProduct.notes ? displayedProduct.notes : 'Sin notas para este producto.'}
+
+          {/* Sección de precio y acción de compra */}
+          <View style={styles.priceRow}>
+            <Text style={styles.price}>
+              $
+              {(displayedProduct.price + (selectedAddon?.price ?? 0)).toFixed(
+                2,
+              )}
             </Text>
-            <Pressable style={styles.editNoteButton} onPress={() => setIsEditingNote(true)}>
-              <Text style={styles.editNoteButtonText}>
-                {displayedProduct.notes ? 'Editar nota' : 'Agregar nota'}
-              </Text>
-            </Pressable>
+
+            {displayedProduct.available && (
+              <Pressable
+                style={[
+                  styles.addToCartButton,
+                  (reachedTotalLimit || reachedProductLimit) &&
+                    styles.addToCartButtonDisabled,
+                ]}
+                onPress={handleAddToCart}
+                disabled={reachedTotalLimit || reachedProductLimit}
+              >
+                <Text style={styles.addToCartButtonText}>Agregar</Text>
+              </Pressable>
+            )}
           </View>
-        )}
-      </View>
-    </ScrollView>
+
+          {/* Advertencias sobre los límites de cantidad en compras */}
+          {reachedProductLimit && (
+            <Text style={styles.totalLimitText}>
+              Alcanzaste el máximo de {MAX_QUANTITY_PER_PRODUCT} unidades para
+              esta combinación.
+            </Text>
+          )}
+
+          {!reachedProductLimit && reachedTotalLimit && (
+            <Text style={styles.totalLimitText}>
+              Alcanzaste el máximo de {MAX_TOTAL_ITEMS} productos por pedido.
+            </Text>
+          )}
+
+          {/* Selector de adicional: uno solo, opcional */}
+          {addonOptions.length > 0 && (
+            <>
+              <Text style={styles.sectionTitle}>Adicional (opcional)</Text>
+              <View style={styles.addonRow}>
+                <Pressable
+                  style={[
+                    styles.addonChip,
+                    selectedAddon === null && styles.addonChipSelected,
+                  ]}
+                  onPress={() => setSelectedAddon(null)}
+                >
+                  <Text
+                    style={[
+                      styles.addonChipText,
+                      selectedAddon === null && styles.addonChipTextSelected,
+                    ]}
+                  >
+                    Sin adicional
+                  </Text>
+                </Pressable>
+                {addonOptions.map((addon) => (
+                  <Pressable
+                    key={addon.id}
+                    style={[
+                      styles.addonChip,
+                      selectedAddon?.id === addon.id &&
+                        styles.addonChipSelected,
+                    ]}
+                    onPress={() => setSelectedAddon(addon)}
+                  >
+                    <Text
+                      style={[
+                        styles.addonChipText,
+                        selectedAddon?.id === addon.id &&
+                          styles.addonChipTextSelected,
+                      ]}
+                    >
+                      {addon.name} (+${addon.price})
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
+            </>
+          )}
+
+          <Text style={styles.sectionTitle}>Descripción</Text>
+          <Text style={styles.description}>{displayedProduct.description}</Text>
+
+          {/* Alerta flotante temporal de adición exitosa al carrito */}
+          {showCartNotification && (
+            <View style={styles.cartNotification}>
+              <Ionicons name="checkmark-circle" size={22} color="#15803d" />
+              <Text style={styles.cartNotificationText}>
+                Producto agregado al carrito
+              </Text>
+            </View>
+          )}
+        </View>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
+// Hojas de estilo de React Native para la maquetación visual
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f0fdf4',
+    backgroundColor: "#15803d",
   },
   content: {
     paddingBottom: 32,
+    flexGrow: 2,
   },
   centered: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     padding: 24,
-    backgroundColor: '#f0fdf4',
+    backgroundColor: "#f0fdf4",
   },
   notFoundText: {
     fontSize: 15,
-    color: '#4d7c62',
-    textAlign: 'center',
+    color: "#4d7c62",
+    textAlign: "center",
   },
   image: {
-    width: '100%',
-    height: 260,
-    backgroundColor: '#e6f7ec',
+    width: "82%",
+    height: 220,
+    alignSelf: "center",
+    borderRadius: 30,
+    backgroundColor: "#e6f7ec",
+    marginTop: 30,
+    marginBottom: 30,
   },
   body: {
+    flex: 2,
     padding: 20,
-    backgroundColor: '#ffffff',
-    marginTop: -20,
+    backgroundColor: "#ffffff",
+    marginTop: 20,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
   },
   headerRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
   },
   name: {
     flex: 1,
     fontSize: 22,
-    fontWeight: '700',
-    color: '#14532d',
+    fontWeight: "700",
+    color: "#14532d",
     marginRight: 10,
   },
   badge: {
@@ -201,108 +329,141 @@ const styles = StyleSheet.create({
     borderRadius: 999,
   },
   badgeAvailable: {
-    backgroundColor: '#dcfce7',
+    backgroundColor: "#dcfce7",
   },
   badgeUnavailable: {
-    backgroundColor: '#fee2e2',
+    backgroundColor: "#fee2e2",
   },
   badgeText: {
     fontSize: 12,
-    fontWeight: '700',
+    fontWeight: "700",
   },
   badgeTextAvailable: {
-    color: '#166534',
+    color: "#166534",
   },
   badgeTextUnavailable: {
-    color: '#991b1b',
+    color: "#991b1b",
   },
   category: {
     fontSize: 13,
-    color: '#4d7c62',
+    color: "#4d7c62",
     marginTop: 6,
+  },
+  priceRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginTop: 10,
   },
   price: {
     fontSize: 20,
-    fontWeight: '700',
-    color: '#15803d',
-    marginTop: 10,
+    fontWeight: "700",
+    color: "#15803d",
+  },
+  addToCartButton: {
+    alignItems: "center",
+    backgroundColor: "#15803d",
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+  },
+  headerCartButton: {
+    marginRight: 12,
+    padding: 4,
+  },
+  headerCartBadge: {
+    position: "absolute",
+    top: -4,
+    right: -4,
+    minWidth: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: "#14532d",
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 3,
+  },
+  headerCartBadgeText: {
+    color: "#fff",
+    fontSize: 9,
+    fontWeight: "700",
+  },
+  addToCartButtonText: {
+    color: "#fff",
+    fontWeight: "700",
+    fontSize: 13,
+  },
+  addToCartButtonDisabled: {
+    backgroundColor: "#a7c4b3",
+  },
+  totalLimitText: {
+    fontSize: 12,
+    color: "#b91c1c",
+    marginTop: 6,
   },
   sectionTitle: {
     fontSize: 14,
-    fontWeight: '700',
-    color: '#14532d',
+    fontWeight: "700",
+    color: "#14532d",
     marginTop: 20,
     marginBottom: 6,
   },
   description: {
     fontSize: 14,
-    color: '#555',
+    color: "#555",
     lineHeight: 20,
   },
-  noteContainer: {
-    backgroundColor: '#f0fdf4',
+  addonRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    marginBottom: 8,
+  },
+  addonChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: "#dcfce7",
+    backgroundColor: "#f0fdf4",
+  },
+  addonChipSelected: {
+    backgroundColor: "#15803d",
+    borderColor: "#15803d",
+  },
+  addonChipText: {
+    fontSize: 13,
+    color: "#14532d",
+    fontWeight: "600",
+  },
+  addonChipTextSelected: {
+    color: "#fff",
+  },
+  cartNotification: {
+    position: "absolute",
+    bottom: 25,
+    left: 20,
+    right: 20,
+    backgroundColor: "#f0fdf4",
     borderRadius: 12,
     padding: 14,
-    borderWidth: 1,
-    borderColor: '#bbf7d0',
-    marginTop: 4,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    elevation: 5,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
   },
-  noteText: {
+
+  cartNotificationText: {
+    color: "#15803d",
     fontSize: 14,
-    color: '#166534',
-    lineHeight: 20,
-    fontStyle: 'italic',
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: '#bbf7d0',
-    borderRadius: 8,
-    backgroundColor: '#f0fdf4',
-    padding: 12,
-    fontSize: 14,
-    marginTop: 8,
-    color: '#14532d',
-  },
-  multiline: {
-    minHeight: 70,
-    textAlignVertical: 'top',
-  },
-  noteButtonsRow: {
-    flexDirection: 'row',
-    gap: 10,
-    marginTop: 10,
-  },
-  noteButton: {
-    flex: 1,
-    alignItems: 'center',
-    borderRadius: 8,
-    padding: 12,
-  },
-  saveButton: {
-    backgroundColor: '#15803d',
-  },
-  saveButtonText: {
-    color: '#fff',
-    fontWeight: '700',
-  },
-  cancelButton: {
-    backgroundColor: '#dcfce7',
-  },
-  cancelButtonText: {
-    color: '#166534',
-    fontWeight: '700',
-  },
-  editNoteButton: {
-    alignSelf: 'flex-start',
-    marginTop: 10,
-    paddingVertical: 8,
-    paddingHorizontal: 14,
-    borderRadius: 8,
-    backgroundColor: '#15803d',
-  },
-  editNoteButtonText: {
-    color: '#fff',
-    fontWeight: '700',
-    fontSize: 13,
+    fontWeight: "700",
   },
 });
