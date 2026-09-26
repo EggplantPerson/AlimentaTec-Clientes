@@ -9,7 +9,7 @@
 
 # Instalacion y ejecucion
 
-1. Clonar el repositorio del frontend
+1. Clonar la rama prod del repositorio
 2. Ejecutar pnpm install desde la carpeta raíz del proyecto para instalar todas las dependencias
 3. Verificar que el backend (servidor + base de datos + sockets) ya esté corriendo y accesible en esas URLs antes de levantar el frontend
 4. ejecutar pnpm expo start
